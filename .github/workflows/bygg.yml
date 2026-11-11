@@ -1,0 +1,42 @@
+# Skapad av tools/publicera_bygg.py i fis-detektor. Ändra där, inte här.
+name: Bygg Fis-o-metern
+
+on:
+  push:
+    branches: [main]
+    paths: ["bygg/**", ".github/workflows/bygg.yml"]
+  schedule:
+    - cron: "17 * * * *"     # varje timme: hämta QR-fisar från fisdatabasen
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bygg
+  cancel-in-progress: false
+
+jobs:
+  bygg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Hämta QR-fisar och bygg sidan
+        run: python bygg/fisrapport.py --offline --no-browser --out .
+      - name: Publicera om något ändrats
+        run: |
+          git config user.name "Fisdetektorn"
+          git config user.email "fisdetektorn@localhost"
+          git add arkiv.json index.html fisar.csv
+          if git diff --cached --quiet; then echo "Inget nytt"; exit 0; fi
+          msg="Fisdata $(TZ=Europe/Stockholm date '+%Y-%m-%d %H:%M') (GitHub)"
+          if git log -1 --format=%s | grep -q '^Fisdata '; then
+            git commit -q --amend -m "$msg"
+            git push -q --force-with-lease=main:origin/main origin HEAD:main
+          else
+            git commit -q -m "$msg"
+            git push -q origin HEAD:main
+          fi

@@ -1,0 +1,1893 @@
+<title>Fis-o-meter</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Figtree:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: instrumentpanel – sammanfattning överst, spelarkort, sedan ett
+   grafrutnät i två spalter som staplas till en på mobil. */
+:root {
+  --bg: #e7ede8;
+  --panel: #f6f9f5;
+  --ink: #17241d;
+  --muted: #5a6b61;
+  --line: #c6d3c9;
+  --accent: #b97c00;          /* gasvarningsgul */
+  --accent-ink: #1b1400;
+  --good: #2f7d4a;
+  --t0: #3f8f5a; --t1: #7a4fb0; --t2: #d0631c; --t3: #8aa10a;
+  --p0: #1f6fb2; --p1: #c2410c; --p2: #0f8a6a; --p3: #a21caf; --p4: #b45309; --p5: #475569;
+  --font-display: "Bungee", "Arial Black", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1411; --panel: #161f1a; --ink: #e2ebe4; --muted: #92a499; --line: #283730;
+    --accent: #f0b429; --accent-ink: #1b1400; --good: #5fc27e;
+    --t0: #5fc27e; --t1: #a98be0; --t2: #f08a4b; --t3: #c3dc2a;
+    --p0: #5aa7e8; --p1: #f0875a; --p2: #3fcf9f; --p3: #d77ae6; --p4: #e8a33d; --p5: #94a3b8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1411; --panel: #161f1a; --ink: #e2ebe4; --muted: #92a499; --line: #283730;
+  --accent: #f0b429; --accent-ink: #1b1400; --good: #5fc27e;
+  --t0: #5fc27e; --t1: #a98be0; --t2: #f08a4b; --t3: #c3dc2a;
+  --p0: #5aa7e8; --p1: #f0875a; --p2: #3fcf9f; --p3: #d77ae6; --p4: #e8a33d; --p5: #94a3b8;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--font-body);
+}
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 28px;
+}
+h1, h2 { margin: 0; text-wrap: balance; }
+h1 {
+  font: 400 clamp(2rem, 6vw, 3.4rem)/1 var(--font-display);
+  letter-spacing: 0.01em;
+}
+h1 span { color: var(--accent); }
+h2 {
+  font: 800 0.78rem/1.2 var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+/* ---------- topp ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; }
+.top p { margin: 6px 0 0; color: var(--muted); }
+.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; color: var(--muted); }
+.toggle input { accent-color: var(--accent); width: 18px; height: 18px; }
+.toggle input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  border-block: 2px solid var(--ink);
+}
+.strip > div { padding: 14px 16px; display: grid; gap: 2px; }
+.strip > div + div { border-left: 1px solid var(--line); }
+.strip b { font: 600 1.6rem/1.2 var(--font-data); font-variant-numeric: tabular-nums; }
+.strip small { color: var(--muted); }
+
+/* ---------- spelare ---------- */
+.players { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.player {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.player header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.player .name { font: 800 1.25rem/1.2 var(--font-body); display: flex; align-items: center; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.lvl {
+  font: 400 0.85rem/1 var(--font-display);
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 5px 8px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.title { font-weight: 600; }
+.xp { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.xp i { display: block; height: 100%; background: var(--accent); }
+.player.click { cursor: pointer; }
+.player.click:hover { border-color: var(--accent); }
+.player.click:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+dialog.fart.list { width: min(860px, calc(100vw - 32px)); }
+.player dl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 0; }
+.player dt { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.player dd { margin: 0; font: 600 1rem/1.3 var(--font-data); font-variant-numeric: tabular-nums; }
+.crown { font-size: 0.8rem; color: var(--accent); font-weight: 800; }
+
+/* ---------- paneler ---------- */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.wide { grid-column: 1 / -1; }
+.chart { position: relative; height: 280px; }
+.chart.tall { height: 320px; }
+@media (max-width: 760px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .chart, .chart.tall { height: 240px; }
+}
+
+.boss { display: grid; gap: 8px; }
+.boss .bname { font: 400 1.4rem/1.2 var(--font-display); }
+.hp { height: 14px; border: 2px solid var(--ink); border-radius: 3px; overflow: hidden; }
+.hp i { display: block; height: 100%; background: var(--t2); }
+
+.ach { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ach div { padding: 10px; border: 1px dashed var(--line); border-radius: 8px; display: grid; gap: 2px; }
+.ach div.got { border-style: solid; border-color: var(--accent); }
+.ach b { font-weight: 800; }
+.ach small { color: var(--muted); }
+
+.heat { overflow-x: auto; }
+.heat table { width: 100%; min-width: 520px; border-collapse: separate; border-spacing: 3px; font-size: 0.72rem; }
+.heat th { font-weight: 600; color: var(--muted); padding: 0 4px; text-align: right; width: 2.5em; }
+.heat td { height: 24px; border-radius: 3px; background: var(--line); }
+.heat thead th { text-align: center; padding: 0; }
+
+.records { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.records div { display: grid; gap: 2px; }
+.records b { font: 600 1.3rem/1.2 var(--font-data); }
+
+.tablewrap { overflow-x: auto; }
+table.log { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+table.log th, table.log td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.log th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+table.log td.r { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; color: var(--bg); }
+.tag { font-size: 0.72rem; font-weight: 800; color: var(--accent); margin-left: 6px; }
+table.log tr.click { cursor: pointer; }
+table.log tr.click:hover td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+dialog.fart { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 18px; border: 1px solid var(--line);
+  border-radius: 14px; background: var(--panel); color: var(--ink); box-sizing: border-box; }
+dialog.fart::backdrop { background: rgb(0 0 0 / 0.55); }
+dialog.fart header { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+dialog.fart h2 { margin: 0 0 4px; }
+dialog.fart button { font: inherit; font-size: 1.2rem; line-height: 1; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: transparent; color: var(--ink); cursor: pointer; }
+dialog.fart .facts { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0; font-size: 0.9rem; }
+dialog.fart .facts b { font-family: var(--font-data); }
+.empty { color: var(--muted); padding: 24px 0; text-align: center; }
+footer { color: var(--muted); font-size: 0.82rem; }
+
+/* ---------- flikar ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--line); }
+.tabs a {
+  font: 800 0.85rem/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted); text-decoration: none; padding: 12px 16px 10px;
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+}
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.view { display: grid; gap: 28px; }
+
+/* ---------- wiki ---------- */
+.wiki { display: grid; gap: 28px; max-width: 900px; }
+.wiki section { display: grid; gap: 10px; }
+.wiki h3 { margin: 0; font: 400 1.25rem/1.2 var(--font-display); }
+.wiki p, .wiki li { max-width: 70ch; }
+.wiki ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.wiki .tablewrap table { font-size: 0.9rem; }
+.wiki td:first-child { font-weight: 600; white-space: nowrap; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.9rem; }
+.toc a { color: var(--accent); }
+.levels { columns: 2 260px; column-gap: 28px; }
+.levels div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
+.levels b { font-family: var(--font-data); font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; min-width: 2.5em; }
+.levels span { flex: 1; }
+.levels i { font-style: normal; font-family: var(--font-data); font-variant-numeric: tabular-nums; color: var(--muted); }
+
+/* ---------- QR-skanning ---------- */
+.topctl { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.scanbtn {
+  font: 800 0.95rem/1 var(--font-body); color: var(--accent-ink); background: var(--accent);
+  border: 0; border-radius: 8px; padding: 11px 14px; cursor: pointer;
+}
+.scanbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.dbnote { margin: -14px 0 0; color: var(--muted); font-size: 0.86rem; }
+.scanview { position: relative; margin: 12px 0; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 4 / 3; max-height: 48vh; }
+.scanview video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scanprog { display: flex; flex-wrap: wrap; gap: 4px; }
+.scanprog span { min-width: 26px; padding: 3px 6px; border-radius: 4px; text-align: center; font: 600 0.75rem/1.2 var(--font-data);
+  border: 1px solid var(--line); color: var(--muted); }
+.scanprog span.got { background: var(--good); border-color: var(--good); color: var(--bg); }
+
+/* ---------- analys ---------- */
+.panel header.bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; }
+.panel p.note { margin: 0; color: var(--muted); font-size: 0.86rem; max-width: 75ch; }
+select.pick {
+  font: 600 0.9rem/1.2 var(--font-body); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; max-width: 100%;
+}
+select.pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrapped { display: grid; gap: 14px; }
+.wrapped .headline { font: 400 clamp(1.3rem, 3.6vw, 2rem)/1.2 var(--font-display); text-wrap: balance; }
+.wrapped .headline span { color: var(--accent); }
+.wrapped .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.wrapped .tiles div { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px; align-content: start; }
+.wrapped .tiles b { font: 600 1.25rem/1.2 var(--font-data); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.wrapped .tiles small { color: var(--muted); }
+.duel td.r b { color: var(--good); }
+.meter { display: inline-block; width: 64px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; vertical-align: middle; margin-right: 6px; }
+.meter i { display: block; height: 100%; background: var(--accent); }
+</style>
+
+<div class="wrap">
+  <nav class="tabs" aria-label="Flikar">
+    <a href="#topp" id="tab-topp">Topplista</a>
+    <a href="#analys" id="tab-analys">Analys</a>
+    <a href="#wiki" id="tab-wiki">Wiki</a>
+  </nav>
+  <div class="view" id="view-topp">
+  <div class="top">
+    <div>
+      <h1>FIS-O-<span>METER</span></h1>
+      <p id="sub"></p>
+    </div>
+    <div class="topctl">
+      <button type="button" class="scanbtn" id="scanOpen">📷 Skanna detektorn</button>
+      <button type="button" class="scanbtn" id="usbOpen" hidden>🔌 Hämta från enhet</button>
+      <label class="toggle" for="showTest"><input type="checkbox" id="showTest"> Visa testfisar</label>
+    </div>
+  </div>
+  <p class="dbnote" id="dbNote" hidden></p>
+
+  <section class="strip" id="strip" aria-label="Sammanfattning"></section>
+
+  <section>
+    <h2>Spelare och nivåer</h2>
+    <small class="muted">Klicka på en spelare för att se alla hens fisar.</small>
+    <div class="players" id="players" style="margin-top:12px"></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel wide">
+      <h2>Poängracet</h2>
+      <div class="chart tall"><canvas id="race" aria-label="Poäng över tid per spelare"></canvas></div>
+    </div>
+    <div class="panel wide">
+      <h2>Seismografen – varje fis, storlek efter poäng</h2>
+      <div class="chart"><canvas id="timeline" aria-label="Fisar över tid efter Richter"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Fis-typer per spelare</h2>
+      <div class="chart"><canvas id="types"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Fis-Richterskalan</h2>
+      <div class="chart"><canvas id="richter"></canvas></div>
+    </div>
+    <div class="panel wide">
+      <h2>Rusningstider – fisar per veckodag och timme</h2>
+      <div class="heat" id="heat"></div>
+    </div>
+    <div class="panel">
+      <h2>Fiskurvor</h2>
+      <div class="chart"><canvas id="curves"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Veckans boss</h2>
+      <div class="boss" id="boss"></div>
+      <h2 style="margin-top:8px">Rekord</h2>
+      <div class="records" id="records"></div>
+    </div>
+    <div class="panel wide">
+      <h2>Achievements</h2>
+      <div class="ach" id="ach"></div>
+    </div>
+    <div class="panel wide">
+      <h2>Minispel – rekord</h2>
+      <div class="ach" id="games"></div>
+    </div>
+    <div class="panel wide">
+      <h2>Senaste fisarna</h2>
+      <small class="muted">Klicka på en fis för att se kurvan.</small>
+      <div class="tablewrap"><table class="log" id="log"></table></div>
+    </div>
+  </section>
+  <dialog class="fart list" id="playerDialog">
+    <header>
+      <div><h2 id="playerTitle"></h2><small class="muted" id="playerSub"></small></div>
+      <button type="button" id="playerClose" aria-label="Stäng">✕</button>
+    </header>
+    <small class="muted">Klicka på en fis för att se kurvan.</small>
+    <div class="tablewrap"><table class="log" id="playerLog"></table></div>
+  </dialog>
+  <dialog class="fart" id="fartDialog">
+    <header>
+      <div><h2 id="fartTitle"></h2><small class="muted" id="fartSub"></small></div>
+      <button type="button" id="fartClose" aria-label="Stäng">✕</button>
+    </header>
+    <div class="facts" id="fartFacts"></div>
+    <div class="chart"><canvas id="fartCurve"></canvas></div>
+    <p class="muted" id="fartNone" hidden>Ingen kurva sparad för den här fisen. Kurvor sparas för fisar från 6 november 2026 och framåt.</p>
+  </dialog>
+
+  <dialog class="fart scan" id="scanDialog">
+    <header>
+      <div><h2>Skanna detektorn</h2>
+        <small class="muted">Detektorn: Meny → Skicka med QR. Håll mobilen 10–20 cm från skärmen tills alla koder är bockade.</small></div>
+      <button type="button" id="scanClose" aria-label="Stäng">✕</button>
+    </header>
+    <div class="scanview"><video id="scanVideo" playsinline muted></video></div>
+    <div class="scanprog" id="scanProg" aria-live="polite"></div>
+    <p id="scanStatus" class="muted"></p>
+  </dialog>
+
+  <dialog class="fart scan" id="usbDialog">
+    <header>
+      <div><h2>Hämta från enhet</h2>
+        <small class="muted">Koppla in detektorn med en USB-kabel som kan föra över data. Fungerar i Chrome och Edge på dator.</small></div>
+      <button type="button" id="usbClose" aria-label="Stäng">✕</button>
+    </header>
+    <p id="usbStatus" class="muted" aria-live="polite"></p>
+  </dialog>
+
+  <footer id="foot"></footer>
+  </div>
+
+  <div class="view" id="view-analys" hidden>
+    <div>
+      <h1>FIS-<span>ANALYS</span></h1>
+      <p class="muted" style="margin-top:6px" id="analysSub"></p>
+    </div>
+    <section class="grid">
+      <div class="panel wide">
+        <header class="bar">
+          <h2>Fis-Wrapped</h2>
+          <select class="pick" id="wrapMonth" aria-label="Välj månad"></select>
+        </header>
+        <div class="wrapped" id="wrapped"></div>
+      </div>
+
+      <div class="panel wide">
+        <header class="bar">
+          <h2>Kurvjämförelse</h2>
+          <span style="display:flex;gap:8px;flex-wrap:wrap">
+            <select class="pick" id="curveGroup" aria-label="Färg efter">
+              <option value="player">Färg efter spelare</option>
+              <option value="type">Färg efter fis-typ</option>
+            </select>
+            <select class="pick" id="curveScale" aria-label="Skala">
+              <option value="shape">Formen (längd och topp = 100 %)</option>
+              <option value="real">Sekunder och % över baslinjen</option>
+            </select>
+          </span>
+        </header>
+        <div class="chart tall"><canvas id="curveCompare" aria-label="Alla fiskurvor ovanpå varandra"></canvas></div>
+        <p class="note" id="curveNote"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Fis-fingeravtryck</h2>
+        <div class="chart"><canvas id="fingerprint" aria-label="Stigtid mot avklingning per fis"></canvas></div>
+        <p class="note">Varje prick är en fis med sparad kurva: hur snabbt gasen når toppen och hur länge det tar innan den
+          sjunkit till hälften. Klicka på en prick för att se fisen.</p>
+      </div>
+      <div class="panel">
+        <h2>Vem var det?</h2>
+        <div id="guess"></div>
+      </div>
+
+      <div class="panel wide">
+        <h2>Formkurvan – snittpoäng över de 5 senaste fisarna</h2>
+        <div class="chart"><canvas id="form" aria-label="Rullande snitt av death score per spelare"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <h2>Dueller – vunna dagar</h2>
+        <div class="tablewrap" id="duels"></div>
+        <p class="note">En dag vinner den som fått flest poäng den dagen. Bara dagar då minst en av de två fisat räknas.</p>
+      </div>
+      <div class="panel">
+        <h2>Tid mellan fisarna</h2>
+        <div class="chart"><canvas id="gaps" aria-label="Tid mellan fisar"></canvas></div>
+        <p class="note" id="gapNote"></p>
+      </div>
+
+      <div class="panel wide">
+        <h2>Luften i bilen – senaste veckan</h2>
+        <div class="chart tall"><canvas id="air" aria-label="Sensorns värde, en mätpunkt i timmen"></canvas></div>
+        <p class="note" id="airNote"></p>
+      </div>
+      <div class="panel wide">
+        <h2>Luften dag för dag</h2>
+        <div class="chart"><canvas id="airDaily" aria-label="Baslinje och luktperioder per dag"></canvas></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="view wiki" id="view-wiki" hidden>
+    <div>
+      <h1>FIS-<span>WIKI</span></h1>
+      <p class="muted" style="margin-top:6px">Allt om fisdetektorn: hur poängen räknas, nivåerna, powerups och spelen.</p>
+    </div>
+    <nav class="toc" aria-label="Innehåll">
+      <a href="#wiki">Så funkar det</a><a href="#wiki">Poäng</a><a href="#wiki">Richterskalan</a>
+      <a href="#wiki">Fis-typer</a><a href="#wiki">Nivåer</a><a href="#wiki">Powerups</a>
+      <a href="#wiki">Bossen</a><a href="#wiki">Achievements</a><a href="#wiki">Minispel</a>
+      <a href="#wiki">Analys och luftlogg</a>
+    </nav>
+
+    <section>
+      <h3>Så funkar det</h3>
+      <p>Detektorn står i bilen och känner av svavelväte, gasen som faktiskt luktar. När nivån stiger snabbt
+        eller ligger högt en stund räknas det som en fis. Då blinkar lysdioderna rött och skärmen frågar
+        <b>Vem var det?</b> Alla har 15 sekunder på sig att ta på sig fisen med knapparna. Trycker ingen blir det
+        <b>Okänd gärningsman</b>, och "Det var inte jag!" lottar ut någon annan.</p>
+      <p>Knapparna: A = nästa, B = välj, håll B = meny, håll A = tillbaka. Håll båda = ångra senaste fisen.</p>
+    </section>
+
+    <section>
+      <h3>Poäng</h3>
+      <ul>
+        <li><b>Death score</b> är fisens totala gasmängd: hur högt den når gånger hur länge den hänger kvar.</li>
+        <li><b>Combo</b>: fisar inom 5 minuter från förra ger DOUBLE KILL (x2), TRIPLE KILL (x3) och MONSTER KILL (x4).</li>
+        <li><b>Happy hour</b>: en slumpad timme om dagen (08–21) ger dubbla poäng.</li>
+        <li><b>Streak</b>: dagar i rad med minst en fis.</li>
+        <li>Poängen är också erfarenhetspoäng: de ger nivåer, och man kan gå ned i nivå om man blir av med poäng.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Fis-Richterskalan</h3>
+      <p>Logaritmisk, tre steg per tiopotens av death score (5 p = 1, 50 p = 4, 500 p = 7, 5000 p = 10).</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Richter</th><th>Namn</th></tr></thead>
+        <tbody>
+          <tr><td>1–2</td><td>Viskning</td></tr><tr><td>3–4</td><td>Pruttgubbe</td></tr>
+          <tr><td>5–6</td><td>Bönsoppa</td></tr><tr><td>7–8</td><td>Kemvapen</td></tr>
+          <tr><td>9–10</td><td>Tjernobyl (flyglarm!)</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h3>Fis-typer</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Typ</th><th>Form</th></tr></thead>
+        <tbody>
+          <tr><td>Smygaren</td><td>låg men envis</td></tr>
+          <tr><td>Tyst men dödlig</td><td>stiger långsamt och hänger kvar länge (30 s eller mer)</td></tr>
+          <tr><td>Knallaren</td><td>snabb eller hög topp som försvinner fort</td></tr>
+          <tr><td>Kemvapnet</td><td>både hög och lång</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h3>Nivåer</h3>
+      <p class="muted">Poäng som krävs för varje nivå. Kraven växer ungefär som nivå<sup>2,2</sup>.</p>
+      <div class="levels" id="levels"></div>
+    </section>
+
+    <section>
+      <h3>Powerups</h3>
+      <p>Varje spelare har en ryggsäck med tre platser. Använd dem under Meny → Powerups. Gasmasken och Spegeln
+        verkar av sig själva. Okända fisar kan inte blåsas bort.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Powerup</th><th>Effekt</th><th>Fås när</th></tr></thead>
+        <tbody>
+          <tr><td>Fjärtfläkten</td><td>blåser bort en annan spelares senaste fis och dess poäng</td><td>mest skada när bossen fälls</td></tr>
+          <tr><td>Mökatrappen</td><td>x2 på egna fisar i 30 min</td><td>streak på 3, 6, 9 … dagar</td></tr>
+          <tr><td>Gasmasken</td><td>stoppar nästa attack mot dig</td><td>5 % chans vid varje påtagen fis</td></tr>
+          <tr><td>Spegeln</td><td>studsar tillbaka nästa attack på avsändaren</td><td>Richter 9–10</td></tr>
+          <tr><td>Detektiven</td><td>ta på dig senaste okända fisen och få poängen</td><td>första påtagna fisen efter tre okända i rad</td></tr>
+          <tr><td>Bönbomben</td><td>1000 i skada på bossen</td><td>nytt rekord i ett minispel</td></tr>
+          <tr><td>Happy hour-biljett</td><td>x2 för alla i en timme</td><td>20 % chans vid DOUBLE KILL eller mer</td></tr>
+          <tr><td>Stinkbomben</td><td>alla andras nästa fis ger halva poängen</td><td>nivå 5, 10, 15 …</td></tr>
+          <tr><td>Robin Hood</td><td>10 % av ledarens poäng till den som ligger sist</td><td>sist i ligan när bossen fälls</td></tr>
+          <tr><td>Lyckohjulet</td><td>byts mot en slumpad annan powerup</td><td>varje nivå upp</td></tr>
+          <tr><td>Turbobönan</td><td>din nästa fis x3</td><td>när du låser upp ett achievement</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h3>Veckans boss</h3>
+      <p>En ny boss varje måndag. Alla fisars poäng gör skada, även okändas. Bossen får 10 % mer hälsa än förra
+        veckans totala skada. Fäller ni den blir det byteskista: 25 % av bossens hälsa i poäng, fördelat efter hur
+        mycket skada var och en gjort, +100 p till den som fäller den, Fjärtfläkten till den med mest skada och
+        Robin Hood till den som ligger sist.</p>
+      <p class="muted" id="bosses"></p>
+    </section>
+
+    <section>
+      <h3>Achievements</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Achievement</th><th>Så låser du upp den</th></tr></thead>
+        <tbody>
+          <tr><td>Nattugglan</td><td>en fis mellan 02 och 05</td></tr>
+          <tr><td>Måndagsmorgon</td><td>en fis en måndag mellan 06 och 10</td></tr>
+          <tr><td>Julaftonsfisen</td><td>en fis på julafton</td></tr>
+          <tr><td>Hattrick</td><td>tre fisar inom en timme</td></tr>
+          <tr><td>Isbiten</td><td>första fisen efter 30 fisfria dagar</td></tr>
+          <tr><td>Frukostfisen</td><td>en fis mellan 06 och 09</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h3>Minispel</h3>
+      <p>Varje nivå upp låser upp ett nytt spel. Rekorden är egna topplistor och ger inga fispoäng, men ett nytt
+        rekord ger en Bönbomb. Håll båda knapparna för att avbryta.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Spel</th><th>Knappar</th></tr></thead>
+        <tbody>
+          <tr><td>Masken</td><td>A = sväng vänster, B = sväng höger</td></tr>
+          <tr><td>Flappy Fis</td><td>A eller B = puff</td></tr>
+          <tr><td>Breakout</td><td>håll A = vänster, håll B = höger</td></tr>
+          <tr><td>Plattform</td><td>A eller B = hopp, igen i luften = dubbelhopp. Gubben springer själv mot toaletten</td></tr>
+          <tr><td>Flipper</td><td>A = vänster flipper, B = höger flipper</td></tr>
+          <tr><td>Snabbaste fisen</td><td>duell: spelare 1 = A, spelare 2 = B. Tryck först när det står FIS! Först till 3</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h3>Analys och luftlogg</h3>
+      <ul>
+        <li><b>Kurvor</b>: detektorn sparar gaskurvan för de 48 senaste fisarna (100 punkter var) i sitt minne, och datorn
+          sparar alla för alltid. Fliken Analys lägger dem ovanpå varandra och visar snittformen per spelare eller typ.</li>
+        <li><b>Fingeravtrycket</b> är kurvans stigtid och hur länge det tar innan hälften av gasen är borta.</li>
+        <li><b>Vem var det?</b> gissar på okända fisar genom att jämföra med de tre mest lika påtagna fisarna. Siffran för
+          träffsäkerhet visar hur ofta gissningen hade haft rätt på fisar där man vet svaret.</li>
+        <li><b>Luftloggen</b>: en gång i timmen sparar detektorn sensorns medel, lägsta och högsta värde, baslinjen och
+          tröskeln (sensorn mäter fortfarande 25 gånger i sekunden). Minnet räcker 60 dygn, och timmarna följer med
+          QR-koderna hit.</li>
+        <li><b>Fis-Wrapped</b> sammanfattar en månad: vinnaren, största fisen, fisigaste dagen och timmen.</li>
+        <li><b>Skicka med QR</b>: välj Meny → Skicka med QR på detektorn, tryck sedan <i>Skanna detektorn</i> här på
+          sidan och håll mobilens kamera mot skärmen tills alla koder är bockade. Detektorn skickar fisarna och luftens timmar som inte
+          skickats förut (B = alla), och sidan sparar dem så att alla ser dem.</li>
+        <li><b>Hämta från enhet</b>: koppla in detektorn med USB-kabel och tryck på knappen (Chrome eller Edge på dator,
+          inget att installera). Första gången väljer du detektorn i webbläsarens lista. Sidan ställer detektorns klocka
+          och hämtar fisarna med kurvor och luftloggen, och sparar dem i fisdatabasen precis som en QR-skanning.
+          Körs <i>fisrapport.py</i> på samma dator måste det stängas först: bara ett program i taget kommer åt detektorn.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const DATA = /*FISDATA*/null;
+
+const TYPE_NAMES = ["Smygaren", "Tyst men dödlig", "Knallaren", "Kemvapnet"];
+const RICHTER_NAMES = ["Viskning", "Pruttgubbe", "Bönsoppa", "Kemvapen", "Tjernobyl"];
+const DAYS = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
+const MONTHS = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+const FLAG_HAPPY = 1, FLAG_TEST = 2, FLAG_DOUBLE = 4, FLAG_TURBO = 8, FLAG_HALF = 16, FLAG_BLOWN = 32;
+
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = n => Math.round(n).toLocaleString("sv-SE");
+const when = d => d ? `${d.getDate()} ${MONTHS[d.getMonth()]} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}` : "okänd tid";
+const el = (tag, props = {}, ...kids) => {
+  const e = document.createElement(tag);
+  Object.assign(e, props);
+  for (const k of kids) e.append(k);
+  return e;
+};
+
+function playerColor(name) {
+  const players = (DATA.device.players || []).map(p => p.name);
+  const i = players.indexOf(name);
+  return i < 0 ? css("--muted") : css(`--p${i % 6}`);
+}
+
+let charts = [];
+let fartChart = null;
+
+const curvePoints = c => c.pts.map((v, i) => ({ x: i / (c.pts.length - 1) * c.dur, y: v / 255 * c.peak }));
+
+function openFart(f) {
+  const dlg = document.getElementById("fartDialog");
+  document.getElementById("fartTitle").textContent = `Fis #${f.seq}: ${f.player || "Okänd"}`;
+  document.getElementById("fartSub").textContent = `${when(f.date)} · ${TYPE_NAMES[f.type]}`;
+  const facts = [["Richter", `R${f.richter}`], ["Poäng", fmt(f.points)], ["Death score", fmt(f.score)],
+                 ["Topp", `+${f.peak} %`], ["Längd", `${f.dur} s`], ["Lutning", `${f.slope} %/s`]];
+  document.getElementById("fartFacts").replaceChildren(...facts.map(([k, v]) => el("span", {}, `${k} `, el("b", { textContent: v }))));
+  if (fartChart) { fartChart.destroy(); fartChart = null; }
+  const canvas = document.getElementById("fartCurve");
+  canvas.parentElement.hidden = !f.curve;
+  document.getElementById("fartNone").hidden = !!f.curve;
+  dlg.showModal();
+  if (!f.curve) return;
+  const rec = (DATA.device.curves || {}).record;
+  const color = playerColor(f.player);
+  const sets = [{ label: "Den här fisen", data: curvePoints(f.curve), borderColor: color, backgroundColor: color + "33",
+                  fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 }];
+  if (rec && rec.seq && rec.seq !== f.seq && any(rec.pts))
+    sets.push({ label: `Rekordet (#${rec.seq})`, data: curvePoints(rec), borderColor: css("--accent"), borderDash: [6, 4],
+                fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5 });
+  fartChart = new Chart(canvas, {
+    type: "line", data: { datasets: sets },
+    options: { maintainAspectRatio: false, animation: false, scales: {
+      x: { type: "linear", title: { display: true, text: "sekunder" }, grid: { display: false } },
+      y: { beginAtZero: true, title: { display: true, text: "% över baslinjen" } },
+    } },
+  });
+}
+const any = a => (a || []).some(v => v);
+
+function fillLog(table, rows) {
+  if (!rows.length) {
+    table.replaceChildren(el("tr", {}, el("td", { className: "empty", textContent: "Inga fisar än." })));
+    return;
+  }
+  table.replaceChildren(
+    el("thead", {}, el("tr", {}, ...["#", "När", "Vem", "Typ", "Richter", "Poäng", "Topp", "Längd", "Kurva"].map(h => el("th", { textContent: h })))),
+    el("tbody", {}, ...rows.map(f => {
+      const chip = el("span", { className: "chip", textContent: TYPE_NAMES[f.type] });
+      chip.style.background = css(`--t${f.type}`);
+      const tags = [];
+      if (f.combo > 1) tags.push(el("span", { className: "tag", textContent: ["", "", "DOUBLE", "TRIPLE"][f.combo] || "MONSTER" }));
+      if (f.flags & FLAG_HAPPY) tags.push(el("span", { className: "tag", textContent: "2X" }));
+      if (f.flags & FLAG_TEST) tags.push(el("span", { className: "tag", textContent: "TEST" }));
+      if (f.flags & FLAG_DOUBLE) tags.push(el("span", { className: "tag", textContent: "MÖKATRAPP" }));
+      if (f.flags & FLAG_TURBO) tags.push(el("span", { className: "tag", textContent: "TURBO" }));
+      if (f.flags & FLAG_HALF) tags.push(el("span", { className: "tag", textContent: "STINKBOMB" }));
+      if (f.flags & FLAG_BLOWN) tags.push(el("span", { className: "tag", textContent: "BORTBLÅST" }));
+      return el("tr", { className: "click", title: f.curve ? "Visa kurvan" : "Visa fisen", onclick: () => openFart(f) },
+        el("td", { className: "r", textContent: f.seq }),
+        el("td", { textContent: when(f.date) }),
+        el("td", { textContent: f.player || "Okänd" }),
+        el("td", {}, chip, ...tags),
+        el("td", { className: "r", textContent: `R${f.richter}` }),
+        el("td", { className: "r", textContent: fmt(f.points) }),
+        el("td", { className: "r", textContent: `+${f.peak} %` }),
+        el("td", { className: "r", textContent: `${f.dur} s` }),
+        el("td", { textContent: f.curve ? "📈" : "" }));
+    })));
+}
+
+function openPlayer(name) {
+  const mine = farts().filter(f => f.player === name).reverse();
+  const pts = mine.filter(f => !(f.flags & FLAG_BLOWN)).reduce((a, f) => a + f.points, 0);
+  const best = mine.reduce((a, f) => Math.max(a, f.points), 0);
+  document.getElementById("playerTitle").textContent = `${name}s fisar`;
+  document.getElementById("playerSub").textContent = mine.length
+    ? `${fmt(mine.length)} fisar i arkivet · ${fmt(pts)} poäng · bästa ${fmt(best)}`
+    : "Inga fisar i arkivet än.";
+  fillLog(document.getElementById("playerLog"), mine);
+  document.getElementById("playerDialog").showModal();
+}
+
+function farts() {
+  const show = document.getElementById("showTest").checked;
+  return DATA.farts
+    .filter(f => show || !(f.flags & FLAG_TEST))
+    .map(f => ({ ...f, date: f.time ? new Date(f.time) : null }));
+}
+
+function render() {
+  charts.forEach(c => c.destroy());
+  charts = [];
+  Chart.defaults.color = css("--muted");
+  Chart.defaults.borderColor = css("--line");
+  Chart.defaults.font.family = css("--font-body");
+
+  const list = farts();
+  const dated = list.filter(f => f.date).sort((a, b) => a.date - b.date);
+  const dev = DATA.device;
+
+  // ---------- topp ----------
+  const updated = new Date(DATA.updated);
+  document.getElementById("sub").textContent =
+    `Uppdaterad ${when(updated)} · ${fmt(list.length)} fisar i arkivet`;
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayCount = dated.filter(f => f.date >= today).length;
+  const last = list[list.length - 1];
+  const hist = Array.from({ length: 7 }, () => Array(24).fill(0));
+  for (const f of dated) hist[(f.date.getDay() + 6) % 7][f.date.getHours()]++;
+  let rush = null, rushN = 0;
+  hist.forEach((row, d) => row.forEach((n, h) => { if (n > rushN) { rushN = n; rush = [d, h]; } }));
+
+  const strip = document.getElementById("strip");
+  strip.replaceChildren(
+    tile(fmt(list.length), "fisar totalt"),
+    tile(fmt(todayCount), "i dag"),
+    tile(last ? `R${last.richter}` : "–", last ? `senaste: ${TYPE_NAMES[last.type]}` : "inga fisar än"),
+    tile(rush ? `${DAYS[rush[0]]} ${rush[1]}–${rush[1] + 1}` : "–", "rusningstid"),
+  );
+
+  // ---------- spelare ----------
+  const ranked = [...(dev.players || [])].sort((a, b) => b.points - a.points);
+  document.getElementById("players").replaceChildren(...ranked.map((p, i) => {
+    const span = p.nextAt ? p.nextAt - p.levelAt : 1;
+    const pct = p.nextAt ? Math.min(100, (p.points - p.levelAt) / span * 100) : 100;
+    const left = p.nextAt ? `${fmt(p.nextAt - p.points)} p kvar till ${p.nextTitle}` : "Högsta nivån!";
+    const dot = el("span", { className: "dot" });
+    dot.style.background = playerColor(p.name);
+    const bar = el("i");
+    bar.style.width = pct + "%";
+    const open = () => openPlayer(p.name);
+    return el("article", { className: "player click", tabIndex: 0, role: "button", title: `Visa ${p.name}s fisar`,
+                           onclick: open, onkeydown: e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } } },
+      el("header", {},
+        el("span", { className: "name" }, dot, p.name, i === 0 && p.points > 0 ? el("span", { className: "crown", textContent: " ETTA" }) : ""),
+        el("span", { className: "lvl", textContent: `NV ${p.level}` })),
+      el("div", {}, el("div", { className: "title", textContent: p.title }),
+        el("small", { className: "muted", textContent: left })),
+      el("div", { className: "xp" }, bar),
+      el("dl", {},
+        stat("Poäng", fmt(p.points)), stat("Fisar", fmt(p.count)),
+        stat("Bästa", fmt(p.best)), stat("Streak", p.streak > 1 ? `${p.streak} d` : "–")),
+      el("small", { className: "muted", textContent: (p.items && p.items.length) ? `Ryggsäck: ${p.items.join(", ")}` : "Ryggsäck: tom" }));
+  }));
+
+  // ---------- poängracet ----------
+  const names = (dev.players || []).map(p => p.name);
+  const sums = Object.fromEntries(names.map(n => [n, 0]));
+  const series = Object.fromEntries(names.map(n => [n, []]));
+  for (const f of dated) {
+    if (!(f.player in sums) || (f.flags & FLAG_BLOWN)) continue;   // bortblåsta poäng räknas inte
+    sums[f.player] += f.points;
+    series[f.player].push({ x: f.date.getTime(), y: sums[f.player] });
+  }
+  const timeAxis = {
+    type: "linear",
+    ticks: { callback: v => { const d = new Date(v); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; }, maxTicksLimit: 8 },
+    grid: { display: false },
+  };
+  charts.push(new Chart(document.getElementById("race"), {
+    type: "line",
+    data: { datasets: names.map(n => ({
+      label: n, data: series[n], stepped: true, borderWidth: 2.5, pointRadius: 0,
+      borderColor: playerColor(n), backgroundColor: playerColor(n),
+    })) },
+    options: {
+      maintainAspectRatio: false, interaction: { mode: "nearest", intersect: false },
+      scales: { x: timeAxis, y: { beginAtZero: true, ticks: { callback: v => fmt(v) } } },
+      plugins: { tooltip: { callbacks: { title: i => when(new Date(i[0].parsed.x)), label: i => `${i.dataset.label}: ${fmt(i.parsed.y)} p` } } },
+    },
+  }));
+
+  // ---------- seismografen ----------
+  const maxScore = Math.max(1, ...dated.map(f => f.score));
+  charts.push(new Chart(document.getElementById("timeline"), {
+    type: "scatter",
+    data: { datasets: TYPE_NAMES.map((t, ti) => ({
+      label: t,
+      data: dated.filter(f => f.type === ti).map(f => ({ x: f.date.getTime(), y: f.richter, r: 3 + 12 * Math.sqrt(f.score / maxScore), f })),
+      backgroundColor: css(`--t${ti}`) + "b3", borderColor: css(`--t${ti}`),
+    })) },
+    options: {
+      maintainAspectRatio: false,
+      elements: { point: { radius: c => c.raw ? c.raw.r : 4, hoverRadius: c => c.raw ? c.raw.r + 2 : 6 } },
+      onClick: (e, items) => { if (items.length) openFart(items[0].element.$context.raw.f); },
+      scales: { x: timeAxis, y: { min: 0, max: 10.5, ticks: { stepSize: 1, callback: v => v >= 1 && v <= 10 ? v : "" }, title: { display: true, text: "Richter" } } },
+      plugins: { tooltip: { callbacks: {
+        title: i => when(new Date(i[0].raw.x)),
+        label: i => { const f = i.raw.f; return `${f.player || "Okänd"}: ${TYPE_NAMES[f.type]}, R${f.richter}, ${fmt(f.points)} p`; },
+      } } },
+    },
+  }));
+
+  // ---------- typer per spelare ----------
+  const who = [...names, "Okänd"];
+  charts.push(new Chart(document.getElementById("types"), {
+    type: "bar",
+    data: { labels: who, datasets: TYPE_NAMES.map((t, ti) => ({
+      label: t, backgroundColor: css(`--t${ti}`),
+      data: who.map(n => list.filter(f => f.type === ti && (f.player || "Okänd") === n).length),
+    })) },
+    options: { maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } },
+  }));
+
+  // ---------- richter ----------
+  const rc = Array(10).fill(0);
+  for (const f of list) rc[Math.min(10, Math.max(1, f.richter)) - 1]++;
+  charts.push(new Chart(document.getElementById("richter"), {
+    type: "bar",
+    data: { labels: rc.map((_, i) => i + 1), datasets: [{
+      label: "Fisar", data: rc,
+      backgroundColor: rc.map((_, i) => [css("--t0"), css("--t0"), css("--t3"), css("--t3"), css("--accent"), css("--accent"), css("--t2"), css("--t2"), css("--p1"), css("--p1")][i]),
+    }] },
+    options: {
+      maintainAspectRatio: false,
+      scales: { x: { grid: { display: false }, title: { display: true, text: "Viskning · Pruttgubbe · Bönsoppa · Kemvapen · Tjernobyl" } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { title: i => `Richter ${i[0].label}: ${RICHTER_NAMES[Math.floor((i[0].label - 1) / 2)]}` } } },
+    },
+  }));
+
+  // ---------- värmekarta ----------
+  const maxH = Math.max(1, ...hist.flat());
+  const head = el("tr", {}, el("th"), ...Array.from({ length: 24 }, (_, h) => el("th", { textContent: h % 3 === 0 ? h : "" })));
+  const rows = hist.map((row, d) => el("tr", {}, el("th", { textContent: DAYS[d] }), ...row.map((n, h) => {
+    const td = el("td", { title: `${DAYS[d]} ${h}–${h + 1}: ${n} st` });
+    if (n) td.style.background = `color-mix(in srgb, ${css("--accent")} ${15 + 85 * n / maxH}%, ${css("--line")})`;
+    return td;
+  })));
+  document.getElementById("heat").replaceChildren(dated.length
+    ? el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows))
+    : el("p", { className: "empty", textContent: "Ingen fis med känd tid än. Klockan ställs när rapportskriptet kör." }));
+
+  // ---------- kurvor ----------
+  const curves = dev.curves || {};
+  const cset = [["Senaste", curves.last, css("--p0")], ["Rekordet", curves.record, css("--accent")]]
+    .filter(([, c]) => c && c.seq)
+    .map(([label, c, color]) => ({
+      label: `${label} (#${c.seq}, ${c.dur} s)`,
+      data: curvePoints(c),
+      borderColor: color, backgroundColor: color + "33", fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
+    }));
+  charts.push(new Chart(document.getElementById("curves"), {
+    type: "line",
+    data: { datasets: cset },
+    options: { maintainAspectRatio: false, scales: {
+      x: { type: "linear", title: { display: true, text: "sekunder" }, grid: { display: false } },
+      y: { beginAtZero: true, title: { display: true, text: "% över baslinjen" } },
+    } },
+  }));
+
+  // ---------- boss och rekord ----------
+  const b = dev.boss || {};
+  const bossEl = document.getElementById("boss");
+  if (b.hp) {
+    const left = b.defeated ? 0 : b.hp - b.damage;
+    const bar = el("i"); bar.style.width = (left / b.hp * 100) + "%";
+    bossEl.replaceChildren(
+      el("div", { className: "bname", textContent: b.name }),
+      el("div", { className: "hp" }, bar),
+      el("div", { className: "num", textContent: b.defeated ? "FÄLLD! Ny boss på måndag." : `${fmt(left)} / ${fmt(b.hp)} HP kvar` }),
+      el("small", { className: "muted", textContent: `${b.kills} bossar fällda totalt. Alla fisar gör skada, även okända.` }));
+  } else {
+    bossEl.replaceChildren(el("p", { className: "muted", textContent: "Bossen dyker upp vid första fisen." }));
+  }
+  const best = (key) => list.reduce((m, f) => (!m || f[key] > m[key] ? f : m), null);
+  const recs = [["Mest poäng", best("points"), f => `${fmt(f.points)} p`], ["Gasigast", best("peak"), f => `+${f.peak} %`],
+                ["Längst", best("dur"), f => `${f.dur} s`], ["Explosivast", best("slope"), f => `${f.slope} %/s`]];
+  document.getElementById("records").replaceChildren(...recs.filter(([, f]) => f).map(([label, f, v]) =>
+    el("div", {}, el("small", { className: "muted", textContent: label }), el("b", { textContent: v(f) }),
+       el("small", { textContent: `${f.player || "Okänd"} · ${when(f.date)}` }))));
+
+  // ---------- achievements ----------
+  document.getElementById("ach").replaceChildren(...(dev.achievements || []).map(a => {
+    const by = a.by >= 0 ? (dev.players.find(p => p.slot === a.by) || {}).name || "?" : "Okänd";
+    return el("div", { className: a.unlocked ? "got" : "" },
+      el("b", { textContent: a.unlocked ? a.name : "???" }),
+      el("small", { textContent: a.unlocked ? `${by} · ${a.t ? when(deviceDate(a.t)) : ""}` : "Inte upplåst än" }));
+  }));
+
+  // ---------- minispel ----------
+  document.getElementById("games").replaceChildren(...(dev.games || []).map(g => {
+    const who = g.player >= 0 ? ((dev.players.find(p => p.slot === g.player) || {}).name || "?") : "Gäst";
+    const best = g.best ? (g.lowerIsBetter ? `${g.best} ms` : fmt(g.best)) : "–";
+    return el("div", { className: g.best ? "got" : "" },
+      el("b", { textContent: g.unlocked ? g.name : "??? (låst)" }),
+      el("small", { textContent: g.unlocked ? (g.best ? `${best} · ${who}` : "Inget rekord än") : "Låses upp vid nivå upp" }));
+  }));
+
+  // ---------- logg ----------
+  fillLog(document.getElementById("log"), [...list].reverse().slice(0, 30));
+
+  document.getElementById("foot").textContent =
+    `Firmware ${dev.version || "?"} · klocka: ${({ rtc: "RTC", soft: "från datorn", none: "saknas" })[dev.clock] || "?"} · ` +
+    `lagring: ${dev.storage === "eeprom" ? "EEPROM" : "flash"}`;
+
+  renderAnalysis(list, dated);
+}
+
+// ================= ANALYS =================
+const DAY_NAMES = ["måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag", "söndag"];
+const MONTH_NAMES = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+const secs = s => s < 90 ? `${Math.round(s)} s` : s < 5400 ? `${Math.round(s / 60)} min` : s < 172800 ? `${(s / 3600).toFixed(1).replace(".", ",")} h` : `${Math.round(s / 86400)} dygn`;
+const pct = x => `${Math.round(x * 100)} %`;
+const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : 0; };
+const mostCommon = (items, key) => {
+  const n = new Map();
+  for (const it of items) { const k = key(it); n.set(k, (n.get(k) || 0) + 1); }
+  let best = null, bestN = 0;
+  for (const [k, c] of n) if (c > bestN) { best = k; bestN = c; }
+  return [best, bestN];
+};
+
+// Kurvans form: stigtid till toppen, tid tills den sjunkit till hälften och hur "fyllig" den är
+function curveFeatures(f) {
+  const c = f.curve;
+  if (!c || !c.pts || c.pts.length < 4 || !any(c.pts)) return null;
+  const n = c.pts.length, step = c.dur / (n - 1);
+  let ip = 0;
+  c.pts.forEach((v, i) => { if (v > c.pts[ip]) ip = i; });
+  const half = c.pts[ip] / 2;
+  let ih = n - 1;
+  for (let i = ip; i < n; i++) if (c.pts[i] < half) { ih = i; break; }
+  return { rise: ip * step, half: (ih - ip) * step, fill: c.pts.reduce((a, v) => a + v, 0) / n / 255 };
+}
+
+// Kännetecken för gissningen: fisens mått, och kurvans form om den finns
+function featureVector(f) {
+  const v = [Math.log(f.score + 1), Math.log(f.peak + 1), Math.log(f.dur + 1), Math.log(f.slope + 1)];
+  const cf = curveFeatures(f);
+  return v.concat(cf ? [cf.rise / Math.max(1, f.dur), Math.log(cf.half + 1), cf.fill] : [null, null, null]);
+}
+
+// k närmaste grannar på standardiserade kännetecken. Saknas kurvan hoppas de måtten över.
+function makeGuesser(train) {
+  const X = train.map(f => featureVector(f));
+  const dims = X[0] ? X[0].length : 0;
+  const mu = [], sd = [];
+  for (let d = 0; d < dims; d++) {
+    const col = X.map(x => x[d]).filter(v => v !== null);
+    const m = col.reduce((a, v) => a + v, 0) / Math.max(1, col.length);
+    const s = Math.sqrt(col.reduce((a, v) => a + (v - m) ** 2, 0) / Math.max(1, col.length - 1)) || 1;
+    mu.push(m); sd.push(s);
+  }
+  const z = x => x.map((v, d) => v === null ? null : (v - mu[d]) / sd[d]);
+  const Z = X.map(z);
+  return (f, skip) => {
+    const q = z(featureVector(f));
+    const near = [];
+    Z.forEach((t, i) => {
+      if (train[i] === skip) return;
+      let sum = 0, n = 0;
+      for (let d = 0; d < dims; d++) if (q[d] !== null && t[d] !== null) { sum += (q[d] - t[d]) ** 2; n++; }
+      if (n) near.push([Math.sqrt(sum / n), train[i].player]);
+    });
+    near.sort((a, b) => a[0] - b[0]);
+    const top = near.slice(0, 3);
+    const votes = new Map();
+    for (const [d, p] of top) votes.set(p, (votes.get(p) || 0) + 1 / (d + 0.15));
+    let best = null, bw = 0;
+    for (const [p, w] of votes) if (w > bw) { bw = w; best = p; }
+    return best ? { player: best, agree: top.filter(([, p]) => p === best).length, of: top.length } : null;
+  };
+}
+
+let wrapChoice = null;
+
+function renderAnalysis(list, dated) {
+  const names = (DATA.device.players || []).map(p => p.name);
+  const withCurve = list.filter(f => f.curve && any(f.curve.pts));
+  const guessedTime = list.filter(f => f.timeGuessed).length;
+  document.getElementById("analysSub").textContent =
+    `${fmt(list.length)} fisar, ${fmt(withCurve.length)} med sparad kurva` +
+    (guessedTime ? ` · ${fmt(guessedTime)} har gissad tid (fisade innan klockan ställdes), de räknas inte i tidsanalyserna` : "");
+  const timed = dated.filter(f => !f.timeGuessed);
+
+  // ---------- Fis-Wrapped ----------
+  const months = [...new Set(dated.map(f => monthKey(f.date)))].sort().reverse();
+  const pick = document.getElementById("wrapMonth");
+  if (!months.includes(wrapChoice)) wrapChoice = months[0] || null;
+  pick.replaceChildren(...months.map(m => {
+    const [y, mo] = m.split("-").map(Number);
+    return el("option", { value: m, textContent: `${MONTH_NAMES[mo - 1]} ${y}`, selected: m === wrapChoice });
+  }));
+  pick.hidden = !months.length;
+  const wrap = document.getElementById("wrapped");
+  if (!wrapChoice) {
+    wrap.replaceChildren(el("p", { className: "empty", textContent: "Ingen fis med känd tid än." }));
+  } else {
+    const inMonth = dated.filter(f => monthKey(f.date) === wrapChoice);
+    const prevKey = (() => { const [y, m] = wrapChoice.split("-").map(Number); return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`; })();
+    const prev = dated.filter(f => monthKey(f.date) === prevKey);
+    const pts = new Map();
+    for (const f of inMonth) if (f.player && !(f.flags & FLAG_BLOWN)) pts.set(f.player, (pts.get(f.player) || 0) + f.points);
+    const ranking = [...pts].sort((a, b) => b[1] - a[1]);
+    const total = inMonth.reduce((a, f) => a + (f.flags & FLAG_BLOWN ? 0 : f.points), 0);
+    const biggest = inMonth.reduce((m, f) => !m || f.points > m.points ? f : m, null);
+    const longest = inMonth.reduce((m, f) => !m || f.dur > m.dur ? f : m, null);
+    const [topType, topTypeN] = mostCommon(inMonth, f => f.type);
+    const tm = inMonth.filter(f => !f.timeGuessed);
+    const [wd, wdN] = mostCommon(tm, f => (f.date.getDay() + 6) % 7);
+    const [hr, hrN] = mostCommon(tm, f => f.date.getHours());
+    const days = new Set(inMonth.map(f => dayKey(f.date))).size;
+    const [y, mo] = wrapChoice.split("-").map(Number);
+    const change = prev.length ? Math.round((inMonth.length - prev.length) / prev.length * 100) : null;
+    const king = ranking[0];
+    const headline = el("div", { className: "headline" });
+    headline.append(`${MONTH_NAMES[mo - 1][0].toUpperCase() + MONTH_NAMES[mo - 1].slice(1)}: `,
+      el("span", { textContent: `${fmt(inMonth.length)} fisar` }),
+      king ? `, och ${king[0]} vann med ${fmt(king[1])} p` : "");
+    const tiles = [
+      [fmt(total), "poäng totalt"],
+      [`${fmt(days)} dagar`, `med minst en fis · ${(inMonth.length / Math.max(1, days)).toFixed(1).replace(".", ",")} per fisdag`],
+      biggest && [`${fmt(biggest.points)} p`, `största fisen: ${biggest.player || "Okänd"}, ${when(biggest.date)}`],
+      longest && [`${longest.dur} s`, `längsta fisen: ${longest.player || "Okänd"}`],
+      topType !== null && [TYPE_NAMES[topType], `vanligaste typen (${topTypeN} st)`],
+      tm.length && [DAY_NAMES[wd], `fisigaste veckodagen (${wdN} st)`],
+      tm.length && [`${String(hr).padStart(2, "0")}–${String(hr + 1).padStart(2, "0")}`, `fisigaste timmen (${hrN} st)`],
+      [`${fmt(inMonth.filter(f => f.combo > 1).length)}`, "combos (double kill eller mer)"],
+      change !== null && [`${change > 0 ? "+" : ""}${change} %`, `mot ${MONTH_NAMES[(mo + 10) % 12]} (${fmt(prev.length)} fisar)`],
+      ranking.length > 1 && [ranking.slice(1).map(([n]) => n).join(", "), "resten av ligan, i ordning"],
+    ].filter(Boolean);
+    wrap.replaceChildren(headline, el("div", { className: "tiles" },
+      ...tiles.map(([v, l]) => el("div", {}, el("b", { textContent: v }), el("small", { textContent: l })))));
+  }
+
+  // ---------- kurvjämförelse ----------
+  const group = document.getElementById("curveGroup").value;
+  const real = document.getElementById("curveScale").value === "real";
+  const groups = group === "type" ? TYPE_NAMES.map((t, i) => [t, css(`--t${i}`), f => f.type === i])
+    : [...names, "Okänd"].map(n => [n, playerColor(n === "Okänd" ? null : n), f => (f.player || "Okänd") === n]);
+  const sets = [];
+  for (const [label, color, match] of groups) {
+    const fs = withCurve.filter(match);
+    if (!fs.length) continue;
+    for (const f of fs) sets.push({
+      label, data: real ? curvePoints(f.curve) : f.curve.pts.map((v, i) => ({ x: i / (f.curve.pts.length - 1) * 100, y: v / 255 * 100 })),
+      borderColor: color + "55", borderWidth: 1, pointRadius: 0, tension: 0.3, fill: false, f, thin: true,
+    });
+    if (!real) {   // snittformen för gruppen
+      const avg = Array.from({ length: 51 }, (_, k) => {
+        const x = k / 50;
+        const ys = fs.map(f => { const p = f.curve.pts, pos = x * (p.length - 1), i = Math.min(p.length - 2, Math.floor(pos));
+          return (p[i] + (p[i + 1] - p[i]) * (pos - i)) / 255 * 100; });
+        return { x: x * 100, y: ys.reduce((a, v) => a + v, 0) / ys.length };
+      });
+      sets.push({ label: `${label} (snitt av ${fs.length})`, data: avg, borderColor: color, borderWidth: 3.5, pointRadius: 0, tension: 0.3, fill: false });
+    }
+  }
+  charts.push(new Chart(document.getElementById("curveCompare"), {
+    type: "line", data: { datasets: sets },
+    options: {
+      maintainAspectRatio: false, animation: false,
+      interaction: { mode: "nearest", intersect: false },
+      onClick: (e, items) => { const s = items.length && sets[items[0].datasetIndex]; if (s && s.f) openFart(s.f); },
+      scales: {
+        x: { type: "linear", min: 0, max: real ? undefined : 100, title: { display: true, text: real ? "sekunder" : "% av fisens längd" }, grid: { display: false } },
+        y: { beginAtZero: true, max: real ? undefined : 100, title: { display: true, text: real ? "% över baslinjen" : "% av toppen" } },
+      },
+      plugins: {
+        legend: { labels: { filter: i => !sets[i.datasetIndex].thin } },
+        tooltip: { callbacks: {
+          title: i => { const s = sets[i[0].datasetIndex]; return s.f ? `Fis #${s.f.seq}: ${s.f.player || "Okänd"}, ${when(s.f.date)}` : s.label; },
+          label: () => "",
+        } },
+      },
+    },
+  }));
+  const hiRes = withCurve.filter(f => f.curve.pts.length > 32).length;
+  document.getElementById("curveNote").textContent = withCurve.length
+    ? `Tunna linjer är enskilda fisar (klicka för att öppna), tjocka är gruppens snittform. ${fmt(withCurve.length)} kurvor` +
+      (hiRes ? `, varav ${fmt(hiRes)} i hög upplösning (100 punkter).` : ".")
+    : "Inga kurvor sparade än.";
+
+  // ---------- fingeravtryck ----------
+  const fpGroups = [...names, "Okänd"].map(n => {
+    const fs = withCurve.filter(f => (f.player || "Okänd") === n).map(f => ({ f, cf: curveFeatures(f) })).filter(x => x.cf);
+    const color = playerColor(n === "Okänd" ? null : n);
+    return { label: n, data: fs.map(({ f, cf }) => ({ x: cf.rise, y: cf.half, f })), backgroundColor: color + "b3", borderColor: color, pointRadius: 6, pointHoverRadius: 8 };
+  }).filter(s => s.data.length);
+  charts.push(new Chart(document.getElementById("fingerprint"), {
+    type: "scatter", data: { datasets: fpGroups },
+    options: {
+      maintainAspectRatio: false,
+      onClick: (e, items) => { if (items.length) openFart(items[0].element.$context.raw.f); },
+      scales: {
+        x: { beginAtZero: true, title: { display: true, text: "stigtid till toppen (s)" } },
+        y: { beginAtZero: true, title: { display: true, text: "tid tills hälften kvar (s)" } },
+      },
+      plugins: { tooltip: { callbacks: { label: i => { const f = i.raw.f; return `${f.player || "Okänd"} #${f.seq}: upp ${Math.round(i.raw.x)} s, halva kvar efter ${Math.round(i.raw.y)} s`; } } } },
+    },
+  }));
+
+  // ---------- vem var det? ----------
+  const claimed = list.filter(f => f.player && names.includes(f.player));
+  const perPlayer = new Map();
+  for (const f of claimed) perPlayer.set(f.player, (perPlayer.get(f.player) || 0) + 1);
+  const learnable = [...perPlayer].filter(([, n]) => n >= 3).map(([p]) => p);
+  const guessBox = document.getElementById("guess");
+  if (learnable.length < 2) {
+    guessBox.replaceChildren(el("p", { className: "note", textContent:
+      "Gissningen behöver minst två spelare med tre påtagna fisar var. Den lär sig av fisarnas mått och kurvor." }));
+  } else {
+    const train = claimed.filter(f => learnable.includes(f.player));
+    const guess = makeGuesser(train);
+    let hits = 0;
+    for (const f of train) { const g = guess(f, f); if (g && g.player === f.player) hits++; }
+    const [common, commonN] = mostCommon(train, f => f.player);
+    const unknown = [...list].reverse().filter(f => !f.player).slice(0, 8);
+    const kids = [el("p", { className: "note", textContent:
+      `Detektorn jämför varje fis med de tre mest lika påtagna fisarna (topp, längd, lutning, poäng och kurvans form). ` +
+      `Provad på de egna fisarna, en i taget som om den vore okänd: ${hits} av ${train.length} rätt (${pct(hits / train.length)}). ` +
+      `Att alltid gissa ${common} hade gett ${pct(commonN / train.length)}. Ju fler fisar, desto bättre blir den.` })];
+    if (unknown.length) {
+      kids.push(el("div", { className: "tablewrap" }, el("table", { className: "log" },
+        el("thead", {}, el("tr", {}, ...["#", "När", "Gissning", "Mest lika fisar"].map(h => el("th", { textContent: h })))),
+        el("tbody", {}, ...unknown.map(f => {
+          const g = guess(f);
+          const meter = el("span", { className: "meter" }, el("i"));
+          meter.firstChild.style.width = g ? pct(g.agree / g.of) : "0";
+          return el("tr", { className: "click", onclick: () => openFart(f) },
+            el("td", { className: "r", textContent: f.seq }), el("td", { textContent: when(f.date) }),
+            el("td", { textContent: g ? g.player : "?" }),
+            el("td", {}, meter, g ? `${g.agree} av ${g.of} är ${g.player}s` : ""));
+        })))));
+    } else {
+      kids.push(el("p", { className: "muted", textContent: "Inga okända fisar att gissa på just nu. Alla har erkänt!" }));
+    }
+    guessBox.replaceChildren(...kids);
+  }
+
+  // ---------- formkurvan ----------
+  // x = fisens nummer i ordningen (alla spelare), så att den fungerar även med gissade tider
+  const order = new Map(list.map((f, i) => [f, i + 1]));
+  charts.push(new Chart(document.getElementById("form"), {
+    type: "line",
+    data: { datasets: names.map(n => {
+      const fs = list.filter(f => f.player === n);
+      return { label: n, borderColor: playerColor(n), backgroundColor: playerColor(n), borderWidth: 2.5, pointRadius: 2.5, tension: 0.25,
+        data: fs.map((f, i) => { const w = fs.slice(Math.max(0, i - 4), i + 1); return { x: order.get(f), y: w.reduce((a, g) => a + g.score, 0) / w.length, f }; }) };
+    }) },
+    options: {
+      maintainAspectRatio: false, interaction: { mode: "nearest", intersect: false },
+      onClick: (e, items) => { if (items.length) openFart(items[0].element.$context.raw.f); },
+      scales: {
+        x: { type: "linear", min: 1, max: Math.max(2, list.length), ticks: { precision: 0 }, title: { display: true, text: "fis nummer (alla spelare, i tidsordning)" }, grid: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: "death score (snitt)" } },
+      },
+      plugins: { tooltip: { callbacks: { title: i => { const f = i[0].raw.f; return `Fis #${f.seq}, ${when(f.date)}`; }, label: i => `${i.dataset.label}: snitt ${fmt(i.parsed.y)}` } } },
+    },
+  }));
+
+  // ---------- dueller ----------
+  const daily = new Map();
+  for (const f of dated) {
+    if (!f.player || (f.flags & FLAG_BLOWN)) continue;
+    const k = dayKey(f.date);
+    if (!daily.has(k)) daily.set(k, new Map());
+    daily.get(k).set(f.player, (daily.get(k).get(f.player) || 0) + f.points);
+  }
+  const active = names.filter(n => [...daily.values()].some(d => d.has(n)));
+  const duelBox = document.getElementById("duels");
+  if (active.length < 2) {
+    duelBox.replaceChildren(el("p", { className: "note", textContent: "Duellerna kräver minst två spelare som fisat." }));
+  } else {
+    const rows = [];
+    for (let a = 0; a < active.length; a++) for (let b = a + 1; b < active.length; b++) {
+      const A = active[a], B = active[b];
+      let wa = 0, wb = 0;
+      for (const d of daily.values()) {
+        const pa = d.get(A) || 0, pb = d.get(B) || 0;
+        if (pa > pb) wa++; else if (pb > pa) wb++;
+      }
+      if (wa + wb) rows.push([A, B, wa, wb]);
+    }
+    duelBox.replaceChildren(el("table", { className: "log duel" },
+      el("thead", {}, el("tr", {}, ...["Duell", "Dagar", "Leder"].map(h => el("th", { textContent: h })))),
+      el("tbody", {}, ...rows.map(([A, B, wa, wb]) => el("tr", {},
+        el("td", { textContent: `${A} – ${B}` }),
+        el("td", { className: "r", textContent: `${wa}–${wb}` }),
+        el("td", { textContent: wa === wb ? "oavgjort" : wa > wb ? A : B }))))));
+  }
+
+  // ---------- tid mellan fisarna ----------
+  const BUCKETS = [[300, "< 5 min"], [1800, "5–30 min"], [7200, "30 min–2 h"], [28800, "2–8 h"], [86400, "8–24 h"], [Infinity, "> 1 dygn"]];
+  const gaps = [];
+  for (let i = 1; i < timed.length; i++) gaps.push((timed[i].date - timed[i - 1].date) / 1000);
+  const counts = BUCKETS.map(() => 0);
+  for (const g of gaps) counts[BUCKETS.findIndex(([lim]) => g < lim)]++;
+  charts.push(new Chart(document.getElementById("gaps"), {
+    type: "bar",
+    data: { labels: BUCKETS.map(b => b[1]), datasets: [{ label: "Mellanrum", data: counts, backgroundColor: css("--accent") }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } },
+  }));
+  const perGap = names.map(n => {
+    const fs = timed.filter(f => f.player === n);
+    const g = fs.slice(1).map((f, i) => (f.date - fs[i].date) / 1000);
+    return g.length ? `${n} ${secs(median(g))}` : null;
+  }).filter(Boolean);
+  document.getElementById("gapNote").textContent = gaps.length
+    ? `Mediantid mellan två fisar: ${secs(median(gaps))}.` + (perGap.length ? ` Mellan en spelares egna fisar: ${perGap.join(", ")}.` : "")
+    : "Behöver minst två fisar med känd tid.";
+
+  // ---------- luften ----------
+  const air = mergedAir();
+  const airNote = document.getElementById("airNote");
+  if (!air || !air.recent || !air.recent.length) {
+    airNote.textContent = "Ingen luftlogg än. Detektorn sparar luften en gång i timmen; den kommer hit med QR-koderna eller när en dator med rapportskriptet läser kortet.";
+    document.getElementById("air").parentElement.hidden = true;
+    document.getElementById("airDaily").parentElement.parentElement.hidden = true;
+  } else {
+    document.getElementById("air").parentElement.hidden = false;
+    document.getElementById("airDaily").parentElement.parentElement.hidden = false;
+    const R = air.recent;   // [ms, bas, medel, lägsta, högsta, tröskel, fisar, flaggor, id, nr], tiondelar
+    const pt = (i) => R.map(r => ({ x: r[0], y: r[i] === null ? null : r[i] / 10 }));
+    // Bryt linjerna där det saknas mätpunkter (detektorn avstängd)
+    const gapMs = air.every * 1000 * 2.5;
+    const spanGaps = false;
+    const withBreaks = arr => { const out = []; arr.forEach((p, i) => { if (i && p.x - arr[i - 1].x > gapMs) out.push({ x: p.x - 1, y: null }); out.push(p); }); return out; };
+    const fartsAt = R.filter(r => r[6] > 0).map(r => ({ x: r[0], y: r[4] / 10, n: r[6] }));
+    const accent = css("--accent");
+    charts.push(new Chart(document.getElementById("air"), {
+      type: "line",
+      data: { datasets: [
+        { label: "Lägsta–högsta", data: withBreaks(pt(4)), borderColor: "transparent", backgroundColor: accent + "33", pointRadius: 0, fill: "+1", spanGaps },
+        { label: "Lägsta", data: withBreaks(R.map(r => ({ x: r[0], y: (r[3] === null ? r[2] : r[3]) / 10 }))), borderColor: "transparent", pointRadius: 0, fill: false, spanGaps },
+        { label: "Medel", data: withBreaks(pt(2)), borderColor: accent, borderWidth: 1.5, pointRadius: 0, spanGaps },
+        { label: "Baslinje", data: withBreaks(pt(1)), borderColor: css("--p0"), borderWidth: 1.5, pointRadius: 0, spanGaps },
+        { label: "Fistrigger (baslinje + tröskel)", data: withBreaks(R.map(r => ({ x: r[0], y: r[5] === null ? null : (r[1] + r[5]) / 10 }))), borderColor: css("--t2"), borderDash: [5, 4], borderWidth: 1, pointRadius: 0, spanGaps },
+        { type: "scatter", label: "Fis", data: fartsAt, backgroundColor: css("--p1"), borderColor: css("--p1"), pointRadius: 5, pointStyle: "triangle" },
+      ] },
+      options: {
+        maintainAspectRatio: false, animation: false, interaction: { mode: "nearest", intersect: false },
+        scales: {
+          x: { type: "linear", ticks: { callback: v => { const d = new Date(v); return `${DAYS[(d.getDay() + 6) % 7]} ${String(d.getHours()).padStart(2, "0")}:00`; }, maxTicksLimit: 8 }, grid: { display: false } },
+          y: { title: { display: true, text: "sensorvärde (ADC-steg)" } },
+        },
+        plugins: {
+          legend: { labels: { filter: i => i.text !== "Lägsta" } },
+          tooltip: { callbacks: { title: i => when(new Date(i[0].parsed.x)), label: i => i.dataset.label === "Fis" ? `${i.raw.n} fis` : `${i.dataset.label}: ${i.parsed.y.toFixed(1).replace(".", ",")}` } },
+        },
+      },
+    }));
+    const days7 = new Set(R.map(r => dayKey(new Date(r[0])))).size;
+    const smell = R.filter(r => r[7] & 8).length;
+    const bases = R.map(r => r[1] / 10);
+    airNote.textContent = `${fmt(R.length)} mätpunkter (en i timmen) under ${days7} dagar. ` +
+      `Baslinjen låg mellan ${Math.min(...bases).toFixed(1).replace(".", ",")} och ${Math.max(...bases).toFixed(1).replace(".", ",")}. ` +
+      `${smell} timmar hade lukt över tröskeln. Det gula bandet visar lägsta och högsta värdet under varje timme.`;
+    const D = air.daily;   // [datum, bas, högsta, luktperioder, fisar, mätpunkter]
+    charts.push(new Chart(document.getElementById("airDaily"), {
+      type: "bar",
+      data: { labels: D.map(d => { const [y, m, dd] = d[0].split("-").map(Number); return `${dd} ${MONTHS[m - 1]}`; }), datasets: [
+        { type: "bar", label: "Timmar med lukt", data: D.map(d => d[3]), backgroundColor: css("--t2") + "aa", yAxisID: "y1" },
+        { type: "line", label: "Baslinje (dygnsmedel)", data: D.map(d => d[1] / 10), borderColor: css("--p0"), backgroundColor: css("--p0"), pointRadius: 2, yAxisID: "y" },
+      ] },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { display: false } },
+          y: { position: "left", title: { display: true, text: "baslinje (ADC)" } },
+          y1: { position: "right", beginAtZero: true, grid: { display: false }, ticks: { precision: 0 }, title: { display: true, text: "timmar med lukt" } },
+        },
+      },
+    }));
+  }
+}
+
+// Luftloggen på sidan: det rapportskriptet hämtat via USB (DATA.air) plus
+// timmar som skannats med QR (DATA.airQr). USB-datan går före.
+function mergedAir() {
+  const base = DATA.air || { every: 3600, recent: [], daily: [] };
+  const qr = DATA.airQr || [];
+  if (!qr.length) return DATA.air;
+  const have = new Set(base.recent.filter(r => r.length > 9).map(r => `${r[8]}-${r[9]}`));
+  const rows = base.recent.concat(qr.filter(a => !have.has(`${a.id}-${a.idx}`)).map(a =>
+    [new Date(a.time).getTime(), a.base, a.mean, a.lo ?? null, a.hi, a.thr ?? null, a.farts, a.flags, a.id, a.idx]));
+  rows.sort((a, b) => a[0] - b[0]);
+  const newest = rows.length ? rows[rows.length - 1][0] : 0;
+  const recent = rows.filter(r => r[0] >= newest - 7 * 86400000);
+  const daily = new Map(base.daily.map(d => [d[0], d]));
+  const extra = new Map();
+  for (const a of qr) {
+    const d = a.time.slice(0, 10);
+    if (daily.has(d)) continue;
+    const x = extra.get(d) || [0, 0, 0, 0, 0];
+    x[0] += a.base; x[1]++; x[2] = Math.max(x[2], a.hi); x[3] += (a.flags & 8) ? 1 : 0; x[4] += a.farts;
+    extra.set(d, x);
+  }
+  for (const [d, x] of extra) daily.set(d, [d, Math.round(x[0] / x[1]), x[2], x[3], x[4], x[1]]);
+  return { every: 3600, recent,
+           daily: [...daily.values()].sort((a, b) => a[0].localeCompare(b[0])) };
+}
+
+function tile(value, label) {
+  return el("div", {}, el("b", { textContent: value }), el("small", { textContent: label }));
+}
+function stat(label, value) {
+  return el("div", {}, el("dt", { textContent: label }), el("dd", { textContent: value }));
+}
+// Kortets tid: sekunder sedan 2000-01-01 lokal tid
+function deviceDate(t) {
+  return new Date(2000, 0, 1, 0, 0, t);
+}
+
+// ================= QR-SKANNING OCH FISDATABASEN =================
+// Detektorn (Meny → Skicka med QR) visar koder som "<nr>/<antal>/<epoch>/<slag><poster>",
+// allt i bas 36. Se mq_detector_xiao/fis_qr.h.
+const QR_RE = /^([0-9A-Z]+)\/([0-9A-Z]+)\/([0-9A-Z]+)\/([SPLF])(.*)$/;
+const unzig = z => (z >>> 1) ^ -(z & 1);
+const QUEUE = "fis-qr-ko";
+const b36 = x => parseInt(x, 36);
+const localIso = d => { const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+const fartKey = f => `${f.epoch}-${f.seq}`;
+const slotName = slot => { const p = (DATA.device.players || []).find(p => p.slot === slot); return p ? p.name : `Spelare ${slot + 1}`; };
+const queueGet = () => { try { return JSON.parse(localStorage.getItem(QUEUE) || "[]"); } catch (e) { return []; } };
+const queueSet = q => { try { localStorage.setItem(QUEUE, JSON.stringify(q)); } catch (e) {} };
+
+function parseScan(texts, epoch) {
+  const farts = [], players = [], hours = [], now = new Date();
+  let status = null;
+  for (const text of texts) {
+    const m = QR_RE.exec(text);
+    if (!m || !m[5]) continue;
+    if (m[4] === "L") {
+      // Luftloggen: "<nr>:<bas>.<medel>.<högsta>.<packat>[.<tid>]+<Δbas>.…", nummer i följd
+      const [start, rest] = m[5].split(":");
+      let idx = b36(start), base = 0;
+      rest.split("+").forEach((item, k) => {
+        const v = item.split(".").map(b36);
+        base = k ? base + unzig(v[0]) : v[0];
+        hours.push({ idx: idx + k, t: v[4] || 0, base, mean: base + unzig(v[1]), hi: base + unzig(v[2]),
+                     farts: v[3] & 255, flags: v[3] >> 8 });
+      });
+      continue;
+    }
+    for (const v of m[5].split("+").map(s => s.split(".").map(b36))) {
+      if (m[4] === "S") status = { now: v[0], total: v[1], unknown: v[2], boss: { hp: v[3], damage: v[4], defeated: !!v[5], kills: v[6] },
+                                   airId: v[7], airNext: v[8], airBoot: v[9], airSince: v[10] };
+      else if (m[4] === "P") players.push({ slot: v[0], points: v[1], count: v[2] });
+      else {
+        // ålder (sekunder sedan fisen) skickas när detektorn saknar klocka men fisen kom sedan start
+        const [seq, t, score, points, peak, dur, slope, packed, age] = v;
+        const pl = (packed >> 6) & 7;
+        const aged = !t && Number.isFinite(age);
+        const when = t ? deviceDate(t) : aged ? new Date(now.getTime() - age * 1000) : now;
+        farts.push({ epoch, seq, time: localIso(when), timeGuessed: !t && !aged,
+          player: pl === 7 ? null : slotName(pl), score, points, peak, dur, slope,
+          type: packed & 3, richter: (packed >> 2) & 15, combo: (packed >> 9) & 7, flags: (packed >> 12) & 63, via: "qr" });
+      }
+    }
+  }
+  // Timmarnas klockslag: kortets tid om den fanns, annars bakåt från nu
+  // (kortet säger hur länge sedan senaste timmen var). Det går bara för
+  // timmar sedan kortet startade; äldre utan tid kan inte placeras.
+  const air = [];
+  if (status && status.airId !== undefined) {
+    const last = status.airNext - 1;
+    for (const h of hours) {
+      let when = null;
+      if (h.t) when = deviceDate(h.t);
+      else if (h.idx >= status.airBoot && h.idx <= last)
+        when = new Date(now.getTime() - ((last - h.idx) * 3600 + status.airSince) * 1000);
+      if (when) air.push({ id: status.airId, idx: h.idx, time: localIso(when), timeGuessed: !h.t,
+                           base: h.base, mean: h.mean, hi: h.hi, farts: h.farts, flags: h.flags });
+    }
+  }
+  return { epoch, farts, players, status, air };
+}
+
+function applyAir(list) {
+  const have = new Set((DATA.airQr = DATA.airQr || []).map(a => `${a.id}-${a.idx}`));
+  let added = 0;
+  for (const a of list || []) if (!have.has(`${a.id}-${a.idx}`)) { DATA.airQr.push(a); added++; }
+  return added;
+}
+
+// Lägger in en skanning på sidan. Ställningen (poäng, bossen) tas bara från
+// en skanning som är nyare än sidan.
+function applyScan(scan, live) {
+  const dev = DATA.device;
+  const st = scan.status;
+  if (st && (live || (scan.epoch === dev.epoch && st.total > (dev.total || 0)))) {
+    Object.assign(dev, { epoch: scan.epoch, total: st.total, unknown: st.unknown, boss: { ...(dev.boss || {}), ...st.boss } });
+    const L = DATA.levels || [];
+    for (const sp of scan.players) {
+      let p = (dev.players = dev.players || []).find(p => p.slot === sp.slot);
+      if (!p) dev.players.push(p = { slot: sp.slot, name: `Spelare ${sp.slot + 1}` });
+      if (sp.name) p.name = sp.name;
+      Object.assign(p, { points: sp.points, count: sp.count });
+      if (L.length) {
+        let i = 0;
+        while (i + 1 < L.length && L[i + 1].at <= sp.points) i++;
+        Object.assign(p, { level: i + 1, title: L[i].title, levelAt: L[i].at,
+          nextAt: L[i + 1] ? L[i + 1].at : 0, nextTitle: L[i + 1] ? L[i + 1].title : "" });
+      }
+    }
+  }
+  const have = new Set(DATA.farts.map(fartKey));
+  let added = 0;
+  for (const f of scan.farts) {
+    if (have.has(fartKey(f))) continue;
+    if (f.epoch === dev.epoch && f.seq > (dev.total || 0)) continue;   // ångrad efteråt
+    DATA.farts.push(f);
+    added++;
+  }
+  DATA.farts.sort((a, b) => (a.time || "").localeCompare(b.time || "") || a.epoch - b.epoch || a.seq - b.seq);
+  applyAir(scan.air);
+  return added;
+}
+
+// Databasens regler tillåter bara nya poster: finns posten redan blir svaret 401
+async function dbPut(path, value) {
+  const r = await fetch(`${DATA.db}/${path}.json`, { method: "PUT", body: JSON.stringify(value) });
+  if (r.ok || r.status === 401 || r.status === 403) return;
+  throw new Error(`databasen svarade ${r.status}`);
+}
+
+async function uploadScan(scan) {
+  for (const f of scan.farts) await dbPut(`fis/farts/${fartKey(f)}`, f);
+  for (const a of scan.air || []) await dbPut(`fis/luft/${a.id}-${a.idx}`, a);
+  if (scan.status) await dbPut(`fis/status/${scan.epoch}-${scan.status.total}-${scan.status.now}`,
+    { epoch: scan.epoch, ...scan.status, players: scan.players, scanned: localIso(new Date()) });
+}
+
+async function loadDb() {
+  const note = document.getElementById("dbNote");
+  let changed = false;
+  // Skanningar som inte kommit fram till databasen än (eller om ingen databas finns)
+  const queued = queueGet();
+  for (const s of queued) changed = applyScan(s, false) > 0 || changed;
+  if (!DATA.db) {
+    if (queued.length) { note.hidden = false; note.textContent = "Fisar skannade med den här mobilen visas bara här: ingen fisdatabas är inställd."; }
+    if (changed) render();
+    return;
+  }
+  try {
+    const [farts, status, luft] = await Promise.all(["farts", "status", "luft"].map(p =>
+      fetch(`${DATA.db}/fis/${p}.json`).then(r => r.ok ? r.json() : null)));
+    if (applyAir(Object.values(luft || {}).filter(a => a && a.time))) changed = true;
+    const dev = DATA.device;
+    const latest = Object.values(status || {}).filter(s => s && s.epoch === dev.epoch)
+      .sort((a, b) => a.total - b.total || a.now - b.now).pop();
+    if (latest && latest.total > (dev.total || 0)) {
+      applyScan({ epoch: latest.epoch, farts: [], players: latest.players || [], status: latest }, false);
+      changed = true;
+    }
+    const fromDb = Object.entries(farts || {}).filter(([k, f]) => f && fartKey(f) === k).map(([, f]) => f);
+    const n = applyScan({ epoch: dev.epoch, farts: fromDb, players: [], status: null }, false);
+    if (n) { changed = true; note.hidden = false; note.textContent = `${n} fisar har kommit in med QR eller USB sedan sidan byggdes.`; }
+    if (queued.length) {
+      const left = [];
+      for (const s of queued) { try { await uploadScan(s); } catch (e) { left.push(s); } }
+      queueSet(left);
+    }
+  } catch (e) {
+    note.hidden = false;
+    note.textContent = "Fisdatabasen svarar inte just nu: sidan visar det som fanns när den byggdes.";
+  }
+  if (changed) render();
+}
+
+// ---------- kameran ----------
+let scanStream = null, scanTimer = null, scanFrames = null, detector = null, jsQRready = null;
+const setScanStatus = t => { document.getElementById("scanStatus").textContent = t; };
+
+function loadJsQR() {
+  return jsQRready = jsQRready || new Promise((ok, fail) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js";
+    s.onload = ok;
+    s.onerror = () => { jsQRready = null; fail(new Error("kunde inte ladda QR-läsaren (internet?)")); };
+    document.head.append(s);
+  });
+}
+
+// Webbläsarens egen QR-läsare om den finns (Chrome på Android), annars jsQR
+async function makeDetector() {
+  if ("BarcodeDetector" in window) {
+    try {
+      if ((await BarcodeDetector.getSupportedFormats()).includes("qr_code")) {
+        const d = new BarcodeDetector({ formats: ["qr_code"] });
+        return async video => (await d.detect(video)).map(c => c.rawValue);
+      }
+    } catch (e) {}
+  }
+  await loadJsQR();
+  const c = document.createElement("canvas"), ctx = c.getContext("2d", { willReadFrequently: true });
+  return async video => {
+    const w = Math.min(720, video.videoWidth), h = Math.round(video.videoHeight * w / (video.videoWidth || 1));
+    if (!w || !h) return [];
+    c.width = w; c.height = h;
+    ctx.drawImage(video, 0, 0, w, h);
+    const r = jsQR(ctx.getImageData(0, 0, w, h).data, w, h);
+    return r ? [r.data] : [];
+  };
+}
+
+function showScanProgress() {
+  const box = document.getElementById("scanProg");
+  if (!scanFrames) { box.replaceChildren(); return; }
+  box.replaceChildren(...Array.from({ length: scanFrames.n }, (_, i) =>
+    el("span", { className: scanFrames.got.has(i) ? "got" : "", textContent: i + 1 })));
+}
+
+function gotCode(raw) {
+  const text = raw.trim();
+  const m = QR_RE.exec(text);
+  if (!m) return;
+  const idx = b36(m[1]), n = b36(m[2]), epoch = b36(m[3]);
+  // Nytt urval på detektorn (B = alla/nya): börja om
+  if (!scanFrames || scanFrames.n !== n || scanFrames.epoch !== epoch) scanFrames = { n, epoch, got: new Map() };
+  if (scanFrames.got.has(idx)) return;
+  scanFrames.got.set(idx, text);
+  showScanProgress();
+  if (navigator.vibrate) navigator.vibrate(30);
+  setScanStatus(`${scanFrames.got.size} av ${n} koder lästa...`);
+  if (scanFrames.got.size === n) finishScan();
+}
+
+async function startScan() {
+  const video = document.getElementById("scanVideo");
+  scanFrames = null;
+  showScanProgress();
+  document.getElementById("scanDialog").showModal();
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setScanStatus("Kameran går inte att använda här. Öppna Fis-o-metern via webbadressen (https), inte som en fil på datorn.");
+    return;
+  }
+  setScanStatus("Startar kameran...");
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false });
+    video.srcObject = scanStream;
+    await video.play();
+    detector = detector || await makeDetector();
+  } catch (e) {
+    stopScan();
+    setScanStatus(`Kameran gick inte att starta: ${e.message}`);
+    return;
+  }
+  setScanStatus("Rikta kameran mot detektorns skärm.");
+  const tick = async () => {
+    if (!scanStream) return;
+    try { for (const t of await detector(video)) gotCode(t); } catch (e) {}
+    if (scanStream) scanTimer = setTimeout(tick, 100);
+  };
+  tick();
+}
+
+function stopScan() {
+  clearTimeout(scanTimer);
+  if (scanStream) scanStream.getTracks().forEach(t => t.stop());
+  scanStream = null;
+}
+
+async function finishScan() {
+  stopScan();
+  const scan = parseScan([...scanFrames.got.values()], scanFrames.epoch);
+  const added = applyScan(scan, true);
+  render();
+  let msg = `Klart! ${scan.farts.length} fisar och ${scan.air.length} timmar luft lästa, ${added} nya fisar på sidan.`;
+  const keep = () => { const q = queueGet(); q.push(scan); queueSet(q); };
+  if (!DATA.db) {
+    keep();
+    msg += " Ingen fisdatabas är inställd, så de sparas bara i den här webbläsaren.";
+  } else {
+    setScanStatus(msg + " Sparar...");
+    try {
+      await uploadScan(scan);
+      msg += " Sparade i fisdatabasen, så alla ser dem.";
+    } catch (e) {
+      keep();
+      msg += ` Kunde inte spara (${e.message}). Sidan försöker igen nästa gång den öppnas.`;
+    }
+  }
+  setScanStatus(msg + " Håll A på detektorn för att avsluta där.");
+}
+
+// ================= HÄMTA FRÅN ENHET (USB) =================
+// Chrome och Edge på dator kan prata med detektorn över USB (Web Serial),
+// precis som tools/fisrapport.py: D ställer klockan, J ger allt som JSON,
+// K kurvorna och B luftloggen. Bara läsning: inget raderas på detektorn.
+// Fisarna sparas i fisdatabasen som en QR-skanning, så alla ser dem.
+const USB_VIDS = [0x2886, 0x303A];   // Seeed (XIAO), Espressif (ESP32-C3 på rev C)
+let usbBusy = false;
+const setUsbStatus = t => { document.getElementById("usbStatus").textContent = t; };
+const pause = ms => new Promise(r => setTimeout(r, ms));
+
+async function usbConnect(port) {
+  await port.open({ baudRate: 115200, bufferSize: 1 << 16 });
+  try { await port.setSignals({ dataTerminalReady: true }); } catch (e) {}
+  const reader = port.readable.getReader(), writer = port.writable.getWriter();
+  const dec = new TextDecoder();
+  let buf = "", lines = [], wake = null, ended = false;
+  const pump = (async () => {
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) { lines.push(buf.slice(0, i).trim()); buf = buf.slice(i + 1); }
+        if (wake) wake();
+      }
+    } catch (e) {}
+    ended = true;
+    if (wake) wake();
+  })();
+  return {
+    // Som reset_input_buffer + write i fisrapport.py
+    async send(cmd) { lines = []; buf = ""; await writer.write(new TextEncoder().encode(cmd + "\n")); },
+    // Nästa rad, eller null när tiden gått ut
+    async line(until) {
+      while (!lines.length) {
+        if (ended) throw new Error("detektorn kopplades ur");
+        const left = until - Date.now();
+        if (left <= 0) return null;
+        await new Promise(r => { wake = r; setTimeout(r, left); });
+        wake = null;
+      }
+      return lines.shift();
+    },
+    async close() {
+      try { await reader.cancel(); } catch (e) {}
+      await pump;
+      reader.releaseLock();
+      writer.releaseLock();
+      try { await port.close(); } catch (e) {}
+    },
+  };
+}
+
+async function usbJson(dev) {
+  await dev.send("J");
+  const until = Date.now() + 6000;
+  for (let l; (l = await dev.line(until)) !== null; )
+    if (l.startsWith("FISDATA:")) return JSON.parse(l.slice(8));
+  return null;   // värmer upp: då lyssnar detektorn inte på kommandon
+}
+
+async function usbCurves(dev) {
+  await dev.send("K");
+  const until = Date.now() + 15000, out = [];
+  for (let l; (l = await dev.line(until)) !== null; ) {
+    if (l.startsWith("FISKURVOR:")) return out;
+    if (l.startsWith("FISKURVA:")) out.push(JSON.parse(l.slice(9)));
+  }
+  return null;
+}
+
+async function usbAir(dev, id, after) {
+  await dev.send(`B${id} ${after}`);
+  const until = Date.now() + 30000, rows = [];
+  let head = null;
+  for (let l; (l = await dev.line(until)) !== null; ) {
+    if (l.startsWith("FISLUFT.:")) return head ? { head, rows } : null;
+    if (l.startsWith("FISLUFT:")) head = JSON.parse(l.slice(8));
+    else if (l.startsWith("FISLUFT+:")) rows.push(...JSON.parse(l.slice(9)));
+  }
+  return null;
+}
+
+// Senaste timmen i luftloggen som sidan redan har (B skickar bara nyare)
+function airAfter(id) {
+  let after = -1;
+  for (const r of (DATA.air && DATA.air.recent) || []) if (r.length > 9 && r[8] === id) after = Math.max(after, r[9]);
+  for (const a of DATA.airQr || []) if (a.id === id) after = Math.max(after, a.idx);
+  return after;
+}
+
+// Detektorns svar i samma form som en QR-skanning (parseScan), plus namn och kurvor
+function usbScan(d, curves, air) {
+  const now = new Date();
+  const names = new Map((d.players || []).map(p => [p.slot, p.name]));
+  // Kurvorna: J har den senaste och rekordet, K alla i flash. Flest punkter vinner.
+  const best = new Map();
+  const dc = d.curves || {};
+  for (const c of [dc.record, ...(dc.recent || []), dc.last, ...(curves || [])]) {
+    if (!c || !Array.isArray(c.pts) || !c.pts.some(Boolean)) continue;
+    const k = `${c.epoch ?? d.epoch}-${c.seq}`, old = best.get(k);
+    if (!old || old.pts.length <= c.pts.length) best.set(k, { dur: c.dur, peak: c.peak, pts: c.pts });
+  }
+  const farts = (d.log || []).map(e => {
+    const f = { epoch: d.epoch, seq: e.seq, time: localIso(e.t ? deviceDate(e.t) : now), timeGuessed: !e.t,
+      player: e.player >= 0 ? (names.get(e.player) || `Spelare ${e.player + 1}`) : null,
+      score: e.score, points: e.points, peak: e.peak, dur: e.dur, slope: e.slope, type: e.type,
+      richter: e.richter, combo: e.combo, flags: e.flags, via: "usb" };
+    const c = best.get(fartKey(f));
+    if (c) f.curve = c;
+    return f;
+  });
+  const players = (d.players || []).map(p => ({ slot: p.slot, name: p.name, points: p.points, count: p.count }));
+  const b = d.boss || {};
+  const status = { now: d.now, total: d.total, unknown: d.unknown,
+                   boss: { hp: b.hp, damage: b.damage, defeated: !!b.defeated, kills: b.kills } };
+  // Luftloggen: timmar utan klockslag räknas bakåt från en senare timme med tid
+  // i samma start (de kommer med jämna mellanrum), som air_times i fisrapport.py
+  const list = [];
+  if (air) {
+    const every = air.head.every || 3600, rows = air.rows;
+    let anchor = null;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const r = rows[i], nx = rows[i + 1];   // [idx, t, bas, medel, lägsta, högsta, tröskel, fisar, flaggor]
+      if (nx && (nx[0] !== r[0] + 1 || nx[8] & 1)) anchor = null;   // lucka eller ny start
+      if (r[1]) anchor = [r[0], r[1]];
+      const t = r[1] || (anchor ? anchor[1] - (anchor[0] - r[0]) * every : 0);
+      if (!t) continue;
+      list.push({ id: air.head.id, idx: r[0], time: localIso(deviceDate(t)), timeGuessed: !r[1],
+                  base: r[2], mean: r[3], lo: r[4], hi: r[5], thr: r[6], farts: r[7], flags: r[8] });
+    }
+    list.reverse();
+  }
+  return { epoch: d.epoch, farts, players, status, air: list, curves: best };
+}
+
+// Lägger till poster som saknas i databasen: en PATCH för alla, eller en i
+// taget om någon annan hann före (reglerna tillåter bara nya poster)
+async function dbAddMissing(path, items, keyOf) {
+  if (!items.length) return 0;
+  const r = await fetch(`${DATA.db}/${path}.json?shallow=true`);
+  if (!r.ok) throw new Error(`databasen svarade ${r.status}`);
+  const have = (await r.json()) || {};
+  const add = {};
+  for (const x of items) { const k = keyOf(x); if (!(k in have)) add[k] = x; }
+  const keys = Object.keys(add);
+  if (!keys.length) return 0;
+  const p = await fetch(`${DATA.db}/${path}.json`, { method: "PATCH", body: JSON.stringify(add) });
+  if (!p.ok) for (const k of keys) await dbPut(`${path}/${k}`, add[k]);
+  return keys.length;
+}
+
+async function uploadUsb(scan) {
+  await dbAddMissing("fis/farts", scan.farts, fartKey);
+  await dbAddMissing("fis/luft", scan.air, a => `${a.id}-${a.idx}`);
+  await dbPut(`fis/status/${scan.epoch}-${scan.status.total}-${scan.status.now}`,
+    { epoch: scan.epoch, ...scan.status, players: scan.players, scanned: localIso(new Date()), via: "usb" });
+}
+
+async function usbFetch() {
+  document.getElementById("usbDialog").showModal();
+  if (usbBusy) return;
+  if (!("serial" in navigator)) {
+    setUsbStatus("Det här fungerar bara i Chrome eller Edge på en dator. På mobilen: Skanna detektorn.");
+    return;
+  }
+  usbBusy = true;
+  let dev = null;
+  try {
+    let port = (await navigator.serial.getPorts()).find(p => USB_VIDS.includes(p.getInfo().usbVendorId));
+    if (!port) {
+      setUsbStatus("Välj detektorn i listan som webbläsaren visar.");
+      try {
+        port = await navigator.serial.requestPort({ filters: USB_VIDS.map(v => ({ usbVendorId: v })) });
+      } catch (e) {
+        setUsbStatus("Ingen detektor vald. Syns den inte i listan: koppla in den igen, med en kabel som kan föra över data.");
+        return;
+      }
+    }
+    setUsbStatus("Ansluter...");
+    try {
+      dev = await usbConnect(port);
+    } catch (e) {
+      setUsbStatus("Kommer inte åt detektorn. Stäng andra program som använder den (fisrapport.py, Arduino) och försök igen.");
+      return;
+    }
+    await pause(500);
+    await dev.send(`D${localIso(new Date()).replace("T", " ")}`);   // ställ klockan
+    await pause(300);
+    let d = null;
+    for (let i = 0; i < 3 && !d; i++) {
+      if (i) {
+        setUsbStatus("Detektorn svarar inte än (värmer den upp?). Försöker igen om 10 s...");
+        await pause(10000);
+      }
+      setUsbStatus("Hämtar fisarna...");
+      d = await usbJson(dev);
+    }
+    if (!d) {
+      setUsbStatus("Detektorn svarar inte. Vänta tills den värmt upp och försök igen.");
+      return;
+    }
+    // Avhuggen rad (SyntaxError): hoppa över den delen, fisarna är redan lästa
+    const partly = async f => { try { return await f(); } catch (e) { if (e instanceof SyntaxError) return null; throw e; } };
+    let curves = null, air = null;
+    if (d.history) {
+      setUsbStatus("Hämtar kurvorna...");
+      curves = await partly(() => usbCurves(dev));
+      setUsbStatus("Hämtar luftloggen...");
+      air = await partly(() => usbAir(dev, d.history.airId, airAfter(d.history.airId)));
+    }
+    await dev.close();
+    dev = null;
+
+    const scan = usbScan(d, curves, air);
+    const have = new Set(DATA.farts.map(fartKey));
+    const fresh = scan.farts.filter(f => !have.has(fartKey(f)));
+    // Kurvor till fisar som redan finns på sidan men saknar en (bara här)
+    for (const f of DATA.farts) if (!f.curve && scan.curves.has(fartKey(f))) f.curve = scan.curves.get(fartKey(f));
+    const upload = { epoch: scan.epoch, farts: fresh.filter(f => !(f.epoch === d.epoch && f.seq > d.total)),
+                     players: scan.players, status: scan.status, air: scan.air };
+    const added = applyScan(upload, true);
+    render();
+    let msg = `Klart! ${scan.farts.length} fisar och ${scan.air.length} timmar luft lästa, ${added} nya fisar på sidan.`;
+    if (d.history && (!curves || !air)) msg += " Kurvorna eller luftloggen gick inte att läsa helt.";
+    if (!DATA.db) {
+      const q = queueGet(); q.push(upload); queueSet(q);
+      setUsbStatus(msg + " Ingen fisdatabas är inställd, så de sparas bara i den här webbläsaren.");
+      return;
+    }
+    setUsbStatus(msg + " Sparar...");
+    try {
+      await uploadUsb(upload);
+      setUsbStatus(msg + " Sparade i fisdatabasen, så alla ser dem. Du kan koppla ur detektorn.");
+    } catch (e) {
+      const q = queueGet(); q.push(upload); queueSet(q);
+      setUsbStatus(msg + ` Kunde inte spara (${e.message}). Sidan försöker igen nästa gång den öppnas.`);
+    }
+  } catch (e) {
+    setUsbStatus(`Något gick fel: ${e.message}. Koppla in detektorn och försök igen.`);
+  } finally {
+    if (dev) await dev.close();
+    usbBusy = false;
+  }
+}
+
+document.getElementById("scanOpen").addEventListener("click", startScan);
+document.getElementById("usbOpen").hidden = !("serial" in navigator);
+document.getElementById("usbOpen").addEventListener("click", usbFetch);
+document.getElementById("usbClose").addEventListener("click", () => document.getElementById("usbDialog").close());
+document.getElementById("scanClose").addEventListener("click", () => document.getElementById("scanDialog").close());
+document.getElementById("scanDialog").addEventListener("close", stopScan);
+
+try {
+  if (localStorage.getItem("fis-visa-test") === "1") document.getElementById("showTest").checked = true;
+} catch (e) {}
+document.getElementById("fartClose").addEventListener("click", () => document.getElementById("fartDialog").close());
+document.getElementById("playerClose").addEventListener("click", () => document.getElementById("playerDialog").close());
+document.getElementById("playerDialog").addEventListener("click", e => { if (e.target.id === "playerDialog") e.target.close(); });
+document.getElementById("fartDialog").addEventListener("click", e => { if (e.target.id === "fartDialog") e.target.close(); });
+document.getElementById("showTest").addEventListener("change", e => {
+  try { localStorage.setItem("fis-visa-test", e.target.checked ? "1" : "0"); } catch (err) {}
+  render();
+});
+// Rita om när temat byts, så att färgerna följer med
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+// ---------- flikar och wiki ----------
+function showView() {
+  const view = location.hash === "#wiki" ? "wiki" : location.hash === "#analys" ? "analys" : "topp";
+  for (const v of ["topp", "analys", "wiki"]) {
+    document.getElementById(`view-${v}`).hidden = v !== view;
+    document.getElementById(`tab-${v}`).setAttribute("aria-current", v === view ? "page" : "false");
+  }
+}
+window.addEventListener("hashchange", () => {
+  showView();
+  if (DATA) render();   // graferna i en dold flik får sin storlek först när fliken syns
+});
+showView();
+for (const id of ["wrapMonth", "curveGroup", "curveScale"]) {
+  document.getElementById(id).addEventListener("change", e => {
+    if (id === "wrapMonth") wrapChoice = e.target.value;
+    render();
+  });
+}
+
+document.querySelectorAll(".toc a").forEach((a, i) => a.addEventListener("click", e => {
+  e.preventDefault();
+  if (location.hash !== "#wiki") location.hash = "wiki";
+  document.querySelectorAll(".wiki section h3")[i].scrollIntoView({ behavior: "smooth" });
+}));
+
+if (DATA && DATA.levels && DATA.levels.length) {
+  document.getElementById("levels").replaceChildren(...DATA.levels.map((l, i) =>
+    el("div", {}, el("b", { textContent: i + 1 }), el("span", { textContent: l.title }),
+       el("i", { textContent: fmt(l.at) + " p" }))));
+}
+if (DATA && DATA.bosses && DATA.bosses.length) {
+  document.getElementById("bosses").textContent = "Bossarna i tur och ordning: " + DATA.bosses.join(", ") + ".";
+}
+
+if (DATA) { render(); loadDb(); }
+else document.querySelector(".wrap").append(el("p", { className: "empty", textContent: "Ingen data inbakad. Kör python tools/fisrapport.py." }));
+</script>
