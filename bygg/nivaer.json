@@ -1,0 +1,174 @@
+{
+ "levels": [
+  {
+   "title": "Pruttvalp",
+   "at": 0
+  },
+  {
+   "title": "Pruttlärling",
+   "at": 25
+  },
+  {
+   "title": "Fjärtfrö",
+   "at": 115
+  },
+  {
+   "title": "Bönplockare",
+   "at": 280
+  },
+  {
+   "title": "Luftläckare",
+   "at": 528
+  },
+  {
+   "title": "Gasgesäll",
+   "at": 862
+  },
+  {
+   "title": "Vindmakare",
+   "at": 1288
+  },
+  {
+   "title": "Pruttpilot",
+   "at": 1808
+  },
+  {
+   "title": "Trumpetare",
+   "at": 2425
+  },
+  {
+   "title": "Kalsongkanonjär",
+   "at": 3142
+  },
+  {
+   "title": "Bönbaron",
+   "at": 3962
+  },
+  {
+   "title": "Ångvält",
+   "at": 4887
+  },
+  {
+   "title": "Gasgreve",
+   "at": 5918
+  },
+  {
+   "title": "Bubbelbadare",
+   "at": 7057
+  },
+  {
+   "title": "Metanmagister",
+   "at": 8307
+  },
+  {
+   "title": "Svavelsmed",
+   "at": 9668
+  },
+  {
+   "title": "Brakmästare",
+   "at": 11143
+  },
+  {
+   "title": "Fjärtfurste",
+   "at": 12733
+  },
+  {
+   "title": "Stinkriddare",
+   "at": 14439
+  },
+  {
+   "title": "Ozonförstörare",
+   "at": 16263
+  },
+  {
+   "title": "Biogasbaron",
+   "at": 18206
+  },
+  {
+   "title": "Pruttprofessor",
+   "at": 20269
+  },
+  {
+   "title": "Stankkemist",
+   "at": 22453
+  },
+  {
+   "title": "Gasgeneral",
+   "at": 24759
+  },
+  {
+   "title": "Orkanmakare",
+   "at": 27190
+  },
+  {
+   "title": "Stankkung",
+   "at": 29745
+  },
+  {
+   "title": "Metanmonark",
+   "at": 32425
+  },
+  {
+   "title": "Svavelsultan",
+   "at": 35232
+  },
+  {
+   "title": "Ärtsoppsorakel",
+   "at": 38167
+  },
+  {
+   "title": "Tornadotarm",
+   "at": 41230
+  },
+  {
+   "title": "Vulkanrumpa",
+   "at": 44423
+  },
+  {
+   "title": "Klimathotet",
+   "at": 47746
+  },
+  {
+   "title": "Gasmaskkrävare",
+   "at": 51200
+  },
+  {
+   "title": "Ozonhålet",
+   "at": 54786
+  },
+  {
+   "title": "Tjernobyltarm",
+   "at": 58505
+  },
+  {
+   "title": "Supernova",
+   "at": 62358
+  },
+  {
+   "title": "Svarta hålet",
+   "at": 66345
+  },
+  {
+   "title": "Big Bang",
+   "at": 70467
+  },
+  {
+   "title": "Gasguden",
+   "at": 74725
+  },
+  {
+   "title": "Fisens fader",
+   "at": 79119
+  }
+ ],
+ "bosses": [
+  "Bönmonstret",
+  "Surkålsdraken",
+  "Ärtsoppsgolemen",
+  "Kålrotskraken",
+  "Linsluset",
+  "Vitlöksvampyren",
+  "Brysselkålsbesten",
+  "Chiliälgen"
+ ]
+}
